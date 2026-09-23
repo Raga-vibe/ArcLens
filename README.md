@@ -135,7 +135,7 @@ Designed for Vercel (or any Node host):
 _Add after deployment: landing hero, wallet dashboard, flow diagram, transaction page._
 
 ## Demo
-_Add the live URL after deployment._
+**Live:** https://arclens-three.vercel.app
 
 ## Hackathon
 Submitted to **Arc Microgrants** on DoraHacks. See [`docs/hackathon-positioning.md`](docs/hackathon-positioning.md) for what's
