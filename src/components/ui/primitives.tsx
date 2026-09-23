@@ -107,14 +107,11 @@ export function CountUp({ value, format }: { value: number; format: (v: number) 
   const ref = useRef<HTMLSpanElement>(null);
   const inView = useInView(ref, { once: true });
   const reduce = useReducedMotion();
-  const [shown, setShown] = useState(reduce ? value : 0);
+  const [animated, setShown] = useState(0);
+  const shown = reduce ? value : animated;
 
   useEffect(() => {
-    if (!inView) return;
-    if (reduce) {
-      setShown(value);
-      return;
-    }
+    if (!inView || reduce) return;
     const c = animate(0, value, { duration: 1.1, ease: [0.22, 1, 0.36, 1], onUpdate: setShown });
     return () => c.stop();
   }, [inView, value, reduce]);

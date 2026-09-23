@@ -23,28 +23,45 @@ export async function GET(req: Request, ctx: RouteContext<"/api/wallet/[address]
   if (!tryAcquireSlot()) return errorResponse("RATE_LIMITED", 10);
 
   const encoder = new TextEncoder();
+  const abort = new AbortController();
+  req.signal?.addEventListener("abort", () => abort.abort());
+  let closed = false;
+
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
-      let closed = false;
       const send = (e: WalletStreamEvent) => {
-        if (!closed) controller.enqueue(encoder.encode(`${JSON.stringify(e)}\n`));
+        if (closed) return;
+        try {
+          controller.enqueue(encoder.encode(`${JSON.stringify(e)}\n`));
+        } catch {
+          closed = true;
+        }
       };
       try {
         const report = await buildWalletReport(v.value.address, v.value.window, {
           stage: (stage) => send({ type: "stage", stage }),
           progress: (p) => send({ type: "progress", ...p }),
+          signal: abort.signal,
         });
         send({ type: "result", data: report });
       } catch (err) {
-        send({ type: "error", error: errorBody(toErrorCode(err)).error });
+        if (!abort.signal.aborted) send({ type: "error", error: errorBody(toErrorCode(err)).error });
       } finally {
         releaseSlot();
-        closed = true;
-        controller.close();
+        if (!closed) {
+          closed = true;
+          try {
+            controller.close();
+          } catch {
+            /* already closed by the runtime */
+          }
+        }
       }
     },
     cancel() {
-      // Client navigated away; the slot is released when the work settles.
+      // The client went away: stop scanning so we don't spend RPC quota for nobody.
+      closed = true;
+      abort.abort();
     },
   });
 

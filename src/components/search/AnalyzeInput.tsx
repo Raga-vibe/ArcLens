@@ -57,7 +57,7 @@ export function AnalyzeInput({ size = "hero", autoFocus, showExample }: Props) {
         }}
         className={`group relative flex w-full items-center gap-2 rounded-[14px] border bg-surface/90 backdrop-blur transition-[border-color,box-shadow] duration-300 ${
           error ? "border-bad/60" : "border-line-strong focus-within:border-accent/60"
-        } focus-within:shadow-[0_0_0_4px_rgba(169,196,240,0.08)] ${hero ? "p-2 pl-5" : "p-1 pl-3"}`}
+        } focus-within:shadow-[0_0_0_4px_rgba(169,196,240,0.08)] ${hero ? "flex-wrap p-2 pl-4 sm:flex-nowrap sm:pl-5" : "p-1 pl-3"}`}
       >
         <label htmlFor={id} className="sr-only">
           Arc wallet address or transaction hash
@@ -95,7 +95,7 @@ export function AnalyzeInput({ size = "hero", autoFocus, showExample }: Props) {
           type="submit"
           disabled={pending}
           className={`relative shrink-0 overflow-hidden rounded-[10px] bg-ink font-medium text-bg transition-[transform,background-color] duration-200 hover:bg-white active:scale-[0.98] disabled:opacity-70 ${
-            hero ? "h-12 px-5 text-[15px]" : "h-9 px-3 text-[13px]"
+            hero ? "h-12 w-full px-5 text-[15px] sm:w-auto" : "h-9 px-3 text-[13px]"
           }`}
         >
           <span className={pending ? "opacity-0" : ""}>{hero ? cta : "Analyze"}</span>

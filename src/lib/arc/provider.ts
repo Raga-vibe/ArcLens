@@ -76,18 +76,21 @@ async function getLogsAdaptive(
   topics: (string | null)[],
   from: number,
   to: number,
+  signal?: AbortSignal,
 ): Promise<RawLog[]> {
   try {
-    return await rpc<RawLog[]>("eth_getLogs", [
-      { fromBlock: hex(from), toBlock: hex(to), address: NATIVE_TRANSFER_EMITTER, topics },
-    ]);
+    return await rpc<RawLog[]>(
+      "eth_getLogs",
+      [{ fromBlock: hex(from), toBlock: hex(to), address: NATIVE_TRANSFER_EMITTER, topics }],
+      signal,
+    );
   } catch (err) {
     // Provider refused the range or result size: split and retry.
     if (err instanceof RpcError && err.kind === "range" && to > from) {
       const mid = from + Math.floor((to - from) / 2);
       const [a, b] = await Promise.all([
-        getLogsAdaptive(topics, from, mid),
-        getLogsAdaptive(topics, mid + 1, to),
+        getLogsAdaptive(topics, from, mid, signal),
+        getLogsAdaptive(topics, mid + 1, to, signal),
       ]);
       return a.concat(b);
     }
@@ -109,6 +112,7 @@ export async function getWalletTransactions(
   address: Address,
   window: ScanWindow,
   onProgress?: (p: ScanProgress) => void,
+  signal?: AbortSignal,
 ): Promise<TokenTransfer[]> {
   const R = serverConfig.logBlockRange;
   const topic = addressToTopic(address);
@@ -134,13 +138,14 @@ export async function getWalletTransactions(
   );
   async function worker() {
     while (cursor < jobs.length) {
+      if (signal?.aborted) throw new RpcError("aborted", "aborted", "upstream");
       const j = jobs[cursor++];
       const key = `${address}:${j.pos}:${j.from}:${j.to}`;
       let result = j.closed ? chunkCache.get(key) : undefined;
       if (!result) {
         const topics: (string | null)[] = [TRANSFER_TOPIC, null, null];
         topics[j.pos] = topic;
-        result = await getLogsAdaptive(topics, j.from, j.to);
+        result = await getLogsAdaptive(topics, j.from, j.to, signal);
         if (j.closed) chunkCache.set(key, result);
       }
       logs.push(...result);

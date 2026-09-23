@@ -71,7 +71,7 @@ function SectionHead({ eyebrow, title, children }: { eyebrow: string; title: Rea
 function Problem() {
   return (
     <section className="border-b border-line">
-      <div className="mx-auto grid max-w-7xl gap-14 px-4 py-24 sm:px-6 lg:grid-cols-[1fr_1.1fr] lg:items-center lg:py-32">
+      <div className="mx-auto grid max-w-7xl gap-14 px-4 py-24 sm:px-6 grid-cols-1 lg:grid-cols-[1fr_1.1fr] lg:items-center lg:py-32">
         <SectionHead
           eyebrow="01 · The problem"
           title={
@@ -309,7 +309,7 @@ const ARC_FACTS = [
 function BuiltForArc() {
   return (
     <section className="border-b border-line">
-      <div className="mx-auto grid max-w-7xl gap-14 px-4 py-24 sm:px-6 lg:grid-cols-[1fr_1.4fr] lg:py-32">
+      <div className="mx-auto grid max-w-7xl gap-14 px-4 py-24 sm:px-6 grid-cols-1 lg:grid-cols-[1fr_1.4fr] lg:py-32">
         <SectionHead eyebrow="05 · Network" title="Built for Arc">
           <p>
             Arc is an open Layer-1 where USDC is the native currency. That design makes a dollar-denominated view

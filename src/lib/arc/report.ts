@@ -34,18 +34,37 @@ import {
 export interface ReportHooks {
   stage?: (s: AnalysisStage) => void;
   progress?: (p: ScanProgress) => void;
+  signal?: AbortSignal;
 }
 
 /** Max counterparties we look up bytecode for (bounded RPC cost). */
-const KIND_LOOKUPS = 25;
+const KIND_LOOKUPS = 12;
 /** Payload caps: stats are computed on everything, only the view is capped. */
 export const TX_PAYLOAD_LIMIT = 1_000;
 export const COUNTERPARTY_PAYLOAD_LIMIT = 100;
+
+/** Recently built reports, so reloads and shared links don't rescan. */
+const REPORT_TTL_MS = 30_000;
+const reportCache = new Map<string, { at: number; report: WalletReport }>();
 
 export async function buildWalletReport(
   address: Address,
   windowKey: WindowKey,
   hooks: ReportHooks = {},
+): Promise<WalletReport> {
+  const cacheKey = `${address}:${windowKey}`;
+  const hit = reportCache.get(cacheKey);
+  if (hit && Date.now() - hit.at < REPORT_TTL_MS) return hit.report;
+  const report = await computeWalletReport(address, windowKey, hooks);
+  reportCache.set(cacheKey, { at: Date.now(), report });
+  if (reportCache.size > 50) reportCache.delete(reportCache.keys().next().value!);
+  return report;
+}
+
+async function computeWalletReport(
+  address: Address,
+  windowKey: WindowKey,
+  hooks: ReportHooks,
 ): Promise<WalletReport> {
   hooks.stage?.("connect");
   const latest = await getLatestBlock();
@@ -55,7 +74,7 @@ export async function buildWalletReport(
   ]);
 
   hooks.stage?.("fetch");
-  const transfers = await getWalletTransactions(address, window, hooks.progress);
+  const transfers = await getWalletTransactions(address, window, hooks.progress, hooks.signal);
 
   hooks.stage?.("normalize");
   const transactions = toWalletTransactions(transfers, address);

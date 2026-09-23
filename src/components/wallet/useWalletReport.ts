@@ -16,11 +16,15 @@ const initial: WalletState = { status: "loading", stage: "connect", progress: nu
 
 /** Consumes the NDJSON analysis stream from /api/wallet/[address]. */
 export function useWalletReport(address: string, window: WindowKey, nonce = 0): WalletState {
-  const [state, setState] = useState<WalletState>(initial);
+  // State is keyed by request, so a new address/window renders as loading
+  // without a synchronous reset inside the effect.
+  const key = `${address}|${window}|${nonce}`;
+  const [keyed, setKeyed] = useState<WalletState & { key: string }>({ ...initial, key });
 
   useEffect(() => {
     const ctrl = new AbortController();
-    setState(initial);
+    const setState = (fn: (s: WalletState) => WalletState) =>
+      setKeyed((prev) => ({ ...fn(prev.key === key ? prev : initial), key }));
     track("wallet_analysis_started", { window });
     const started = performance.now();
 
@@ -77,7 +81,7 @@ export function useWalletReport(address: string, window: WindowKey, nonce = 0): 
     })();
 
     return () => ctrl.abort();
-  }, [address, window, nonce]);
+  }, [address, window, nonce, key]);
 
-  return state;
+  return keyed.key === key ? keyed : initial;
 }

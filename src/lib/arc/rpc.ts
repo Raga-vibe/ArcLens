@@ -108,10 +108,14 @@ async function once<T>(e: Endpoint, method: string, params: unknown[]): Promise<
  * Call a JSON-RPC method with failover across configured endpoints. Range
  * errors are surfaced immediately (the caller should split the request).
  */
-export async function rpc<T>(method: string, params: unknown[] = []): Promise<T> {
+export async function rpc<T>(method: string, params: unknown[] = [], signal?: AbortSignal): Promise<T> {
   let last: RpcError | undefined;
   let prev: Endpoint | undefined;
-  for (let attempt = 0; attempt < 6; attempt++) {
+  let failures = 0;
+  // Rate limits are expected on public RPCs: back off exponentially and keep
+  // going (bounded). Other upstream errors fail over a few times, then give up.
+  for (let attempt = 0; attempt < 12; attempt++) {
+    if (signal?.aborted) throw new RpcError("aborted", "aborted", "upstream");
     const e = pick(prev);
     try {
       return await once<T>(e, method, params);
@@ -119,13 +123,16 @@ export async function rpc<T>(method: string, params: unknown[] = []): Promise<T>
       const re = err as RpcError;
       last = re;
       if (re.kind === "range") throw re;
+      const backoff = Math.min(5_000, 400 * 2 ** Math.min(attempt, 4)) + Math.random() * 250;
       if (re.kind === "rate-limit") {
-        e.cooldownUntil = Date.now() + 800 * (attempt + 1);
+        e.cooldownUntil = Date.now() + backoff;
       } else {
-        e.cooldownUntil = Date.now() + 400;
+        failures++;
+        e.cooldownUntil = Date.now() + 500;
+        if (failures >= 4) break;
       }
       prev = e;
-      await sleep(150 * (attempt + 1));
+      await sleep(re.kind === "rate-limit" ? Math.min(backoff, 1_500) : 200 * failures);
     }
   }
   throw last ?? new RpcError("RPC unavailable", "unknown", "upstream");

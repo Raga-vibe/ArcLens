@@ -28,19 +28,6 @@ export function CounterpartyTable({ data, total }: { data: Counterparty[]; total
 
   if (!data.length) return <EmptyState title="No counterparties found" body="This address had no USDC transfers with other addresses in the analyzed window." />;
 
-  const Th = ({ k, children, className }: { k?: SortKey; children: React.ReactNode; className?: string }) => (
-    <th scope="col" aria-sort={k && sort === k ? "descending" : undefined} className={`px-3 py-2.5 text-left font-normal ${className ?? ""}`}>
-      {k ? (
-        <button type="button" onClick={() => setSort(k)} className={`inline-flex items-center gap-1 hover:text-ink ${sort === k ? "text-ink" : ""}`}>
-          {children}
-          <span aria-hidden="true" className={sort === k ? "opacity-100" : "opacity-0"}>↓</span>
-        </button>
-      ) : (
-        children
-      )}
-    </th>
-  );
-
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 pb-3 pt-4 sm:px-5">
@@ -69,12 +56,12 @@ export function CounterpartyTable({ data, total }: { data: Counterparty[]; total
           <thead className="border-y border-line text-xs text-muted">
             <tr>
               <th scope="col" className="w-10 px-3 py-2.5 pl-5 text-left font-normal">#</th>
-              <Th>Address</Th>
-              <Th>Direction</Th>
-              <Th k="txCount" className="text-right">Transfers</Th>
-              <Th k="totalVolume" className="text-right">Volume</Th>
-              <Th>First</Th>
-              <Th k="lastSeen">Latest</Th>
+              <Th sort={sort} onSort={setSort}>Address</Th>
+              <Th sort={sort} onSort={setSort}>Direction</Th>
+              <Th sort={sort} onSort={setSort} k="txCount" className="text-right">Transfers</Th>
+              <Th sort={sort} onSort={setSort} k="totalVolume" className="text-right">Volume</Th>
+              <Th sort={sort} onSort={setSort}>First</Th>
+              <Th sort={sort} onSort={setSort} k="lastSeen">Latest</Th>
             </tr>
           </thead>
           <tbody>
@@ -151,5 +138,32 @@ export function CounterpartyTable({ data, total }: { data: Counterparty[]; total
         </div>
       )}
     </div>
+  );
+}
+
+function Th({
+  k,
+  sort,
+  onSort,
+  children,
+  className,
+}: {
+  k?: SortKey;
+  sort: SortKey;
+  onSort: (k: SortKey) => void;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <th scope="col" aria-sort={k && sort === k ? "descending" : undefined} className={`px-3 py-2.5 text-left font-normal ${className ?? ""}`}>
+      {k ? (
+        <button type="button" onClick={() => onSort(k)} className={`inline-flex items-center gap-1 hover:text-ink ${sort === k ? "text-ink" : ""}`}>
+          {children}
+          <span aria-hidden="true" className={sort === k ? "opacity-100" : "opacity-0"}>↓</span>
+        </button>
+      ) : (
+        children
+      )}
+    </th>
   );
 }

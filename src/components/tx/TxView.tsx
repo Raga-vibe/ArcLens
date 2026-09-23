@@ -15,12 +15,14 @@ type State =
   | { status: "error"; code: string; message: string };
 
 export function TxView({ hash }: { hash: string }) {
-  const [state, setState] = useState<State>({ status: "loading" });
   const [retry, setRetry] = useState(0);
+  const key = `${hash}|${retry}`;
+  const [keyed, setKeyed] = useState<{ key: string; state: State }>({ key, state: { status: "loading" } });
+  const state: State = keyed.key === key ? keyed.state : { status: "loading" };
 
   useEffect(() => {
     const ctrl = new AbortController();
-    setState({ status: "loading" });
+    const setState = (next: State) => setKeyed({ key, state: next });
     track("transaction_analysis_started");
     fetch(`/api/tx/${hash}`, { signal: ctrl.signal })
       .then((r) => r.json() as Promise<ApiResponse<TransactionInsight>>)
@@ -35,7 +37,7 @@ export function TxView({ hash }: { hash: string }) {
           setState({ status: "error", code: "NETWORK", message: "Couldn't reach ArcLens. Check your connection and try again." });
       });
     return () => ctrl.abort();
-  }, [hash, retry]);
+  }, [hash, retry, key]);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
@@ -183,7 +185,7 @@ function TxReport({ tx }: { tx: TransactionInsight }) {
         </div>
       </motion.section>
 
-      <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.2fr_1fr]">
         <section className="panel" aria-labelledby="tx-facts">
           <h2 id="tx-facts" className="border-b border-line px-5 py-3.5 text-[15px] font-medium">Details</h2>
           <dl className="divide-y divide-line">

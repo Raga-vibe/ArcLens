@@ -180,8 +180,8 @@ export function FlowDiagram({
   );
 }
 
-function FlowList({ left, right, inTotal, outTotal }: { left: Side[]; right: Side[]; inTotal: number; outTotal: number }) {
-  const Col = ({ items, total, dir }: { items: Side[]; total: number; dir: "in" | "out" }) => (
+function FlowCol({ items, total, dir }: { items: Side[]; total: number; dir: "in" | "out" }) {
+  return (
     <div>
       <p className="eyebrow mb-3">{dir === "in" ? "Came from ↓" : "Went to ↑"}</p>
       {items.length === 0 ? (
@@ -209,10 +209,13 @@ function FlowList({ left, right, inTotal, outTotal }: { left: Side[]; right: Sid
       )}
     </div>
   );
+}
+
+function FlowList({ left, right, inTotal, outTotal }: { left: Side[]; right: Side[]; inTotal: number; outTotal: number }) {
   return (
     <div className="grid gap-8 sm:grid-cols-2">
-      <Col items={left} total={inTotal} dir="in" />
-      <Col items={right} total={outTotal} dir="out" />
+      <FlowCol items={left} total={inTotal} dir="in" />
+      <FlowCol items={right} total={outTotal} dir="out" />
     </div>
   );
 }

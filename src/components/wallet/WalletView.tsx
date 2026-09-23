@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "motion/react";
+import { motion } from "motion/react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -39,14 +39,14 @@ export function WalletView({
         onWindow={changeWindow}
         report={state.status === "ready" ? state.report : null}
       />
-      <AnimatePresence mode="wait">
+      {/* No exit animations: they depend on rAF, which pauses in background tabs. */}
         {state.status === "loading" && (
-          <motion.div key={`loading-${window}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          <motion.div key={`loading-${window}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <AnalysisLoader stage={state.stage} progress={state.progress} />
           </motion.div>
         )}
         {state.status === "error" && state.error && (
-          <motion.div key="error" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="panel mt-8">
+          <motion.div key="error" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="panel mt-8">
             <EmptyState
               icon={state.error.code === "RATE_LIMITED" ? "⏱" : "!"}
               title={
@@ -78,11 +78,10 @@ export function WalletView({
           </motion.div>
         )}
         {state.status === "ready" && state.report && (
-          <motion.div key={`ready-${window}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+          <motion.div key={`ready-${window}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
             <WalletDashboard report={state.report} />
           </motion.div>
         )}
-      </AnimatePresence>
     </div>
   );
 }

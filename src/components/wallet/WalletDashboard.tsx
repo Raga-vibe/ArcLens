@@ -38,7 +38,6 @@ export function WalletHeader({
   report: WalletReport | null;
 }) {
   const [shared, setShared] = useState(false);
-  const now = Math.floor(Date.now() / 1000);
   return (
     <div className="flex flex-col gap-5 border-b border-line pb-6 lg:flex-row lg:items-end lg:justify-between">
       <div className="min-w-0">
@@ -91,7 +90,7 @@ export function WalletHeader({
             Blocks <span className="font-mono">{formatInt(report.window.fromBlock)}–{formatInt(report.window.toBlock)}</span>
             <br className="hidden lg:block" />
             <span className="lg:hidden"> · </span>
-            {formatDateTime(report.window.fromTimestamp)} → now · analyzed {formatRelative(report.generatedAt, now)}
+            {formatDateTime(report.window.fromTimestamp)} → {formatDateTime(report.window.toTimestamp)}
           </p>
         )}
       </div>
@@ -194,7 +193,7 @@ export function WalletDashboard({ report }: { report: WalletReport }) {
             </div>
           </Panel>
 
-          <div className="grid gap-6 xl:grid-cols-[1.35fr_1fr]">
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.35fr_1fr]">
             <Panel id="flow" title="Value flow" eyebrow="Counterparty flow" description="Top senders → this wallet → top recipients. Width is proportional to USDC volume.">
               <div className="p-4 sm:p-5">
                 <FlowDiagram
@@ -250,7 +249,7 @@ function SummaryPanel({ report }: { report: WalletReport }) {
   if (s.transferCount) extras.push({ k: "Net flow", v: `${s.netFlow >= 0 ? "+" : ""}${formatUsd(s.netFlow)}` });
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.3fr_1fr]">
       <section aria-labelledby="summary-title" className="panel p-5 sm:p-6">
         <p className="eyebrow mb-3">Activity summary</p>
         <h2 id="summary-title" className="sr-only">Activity summary</h2>

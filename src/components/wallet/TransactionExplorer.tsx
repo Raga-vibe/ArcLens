@@ -106,7 +106,41 @@ export function TransactionExplorer({ data, total, analyzedAt }: { data: Transac
         <EmptyState title="No matching transfers" body="Try a different filter or search term." />
       ) : (
         <>
-          <div className="scroll-x">
+          {/* Mobile: cards */}
+          <ul className="space-y-2 px-4 pb-3 sm:hidden">
+            {view.map((t) => {
+              const isOpen = open === t.id;
+              return (
+                <li key={t.id} className={`rounded-lg border border-line ${isOpen ? "bg-elevated" : "bg-bg/40"}`}>
+                  <button
+                    type="button"
+                    aria-expanded={isOpen}
+                    aria-controls={`txm-${t.id}`}
+                    onClick={() => setOpen(isOpen ? null : t.id)}
+                    className="flex w-full items-start justify-between gap-3 p-3 text-left"
+                  >
+                    <span className="min-w-0">
+                      <span className="flex items-center gap-2">
+                        <DirectionBadge d={t.direction} />
+                        <span className="font-mono text-xs text-ink-2">{shortAddress(t.counterparty)}</span>
+                      </span>
+                      <span className="mt-1.5 block text-[11px] text-muted tabular">{formatDateTime(t.timestamp)}</span>
+                    </span>
+                    <span className={`shrink-0 tabular text-sm ${t.direction === "in" ? "text-ink" : "text-ink-2"}`}>
+                      {t.direction === "in" ? "+" : "−"}
+                      {formatUsd(t.value)}
+                    </span>
+                  </button>
+                  {isOpen && (
+                    <div id={`txm-${t.id}`} className="border-t border-line">
+                      <TxDetail t={t} />
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+          <div className="scroll-x hidden sm:block">
             <table className="w-full min-w-[720px] text-sm">
               <caption className="sr-only">USDC transfers for this address. Expand a row for full details.</caption>
               <thead className="border-y border-line text-xs text-muted">
