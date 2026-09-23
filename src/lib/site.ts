@@ -5,8 +5,12 @@ export const SITE = {
   tagline: "See what’s happening on Arc.",
   description:
     "Explore Arc wallet activity through visual analytics, transaction flows, counterparties, and on-chain statistics.",
-  url: (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, ""),
-  github: process.env.NEXT_PUBLIC_GITHUB_URL || "https://github.com/",
+  // NEXT_PUBLIC_SITE_URL wins; on Vercel fall back to the production domain.
+  url: (
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "http://localhost:3000")
+  ).replace(/\/$/, ""),
+  github: process.env.NEXT_PUBLIC_GITHUB_URL || "https://github.com/Raga-vibe/ArcLens",
   x: process.env.NEXT_PUBLIC_X_URL || "https://x.com/",
   contactEmail: process.env.NEXT_PUBLIC_CONTACT_EMAIL || "",
 };

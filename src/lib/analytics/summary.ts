@@ -180,7 +180,7 @@ export function generateWalletSummary(input: SummaryInput): {
     insights.push({
       id: "largest",
       title: "Largest transfer",
-      body: `${formatUsd(s.largest.value)} ${s.largest.direction === "in" ? "received" : "sent"} on ${formatDateTime(s.largest.timestamp)}: ${formatPct(share)} of window volume.`,
+      body: `${formatUsd(s.largest.value)} ${s.largest.direction === "in" ? "received" : "sent"} on ${formatDateTime(s.largest.timestamp)}: ${share < 0.01 ? "<1%" : formatPct(share)} of window volume.`,
       tone: "neutral",
       metric: formatUsd(s.largest.value, { compact: true }),
     });
