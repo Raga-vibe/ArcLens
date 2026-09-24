@@ -41,3 +41,10 @@ yarn-error.log*
 next-env.d.ts
 
 !.env.example
+
+# Local-only files (AI tooling, private notes)
+CLAUDE.md
+AGENTS.md
+.claude/
+docs/hackathon-positioning.md
+docs/arclens-logo.png

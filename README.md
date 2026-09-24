@@ -33,7 +33,7 @@ ArcLens retrieves an address's USDC activity directly from Arc mainnet, normaliz
   ERC-20 log to avoid double counting.
 - Deterministic finality means closed block ranges never change, so ArcLens caches them indefinitely.
 
-Details and sources: [`docs/arc-research.md`](docs/arc-research.md). Positioning: [`docs/hackathon-positioning.md`](docs/hackathon-positioning.md).
+Details and sources: [`docs/arc-research.md`](docs/arc-research.md).
 
 ## Architecture
 ```
@@ -138,8 +138,7 @@ _Add after deployment: landing hero, wallet dashboard, flow diagram, transaction
 **Live:** https://arclens-three.vercel.app
 
 ## Hackathon
-Submitted to **Arc Microgrants** on DoraHacks. See [`docs/hackathon-positioning.md`](docs/hackathon-positioning.md) for what's
-implemented, what's experimental, and open questions.
+Built for **Arc Microgrants** on DoraHacks.
 
 ## Future possibilities
 - Indexer-backed full-history reports (Goldsky / Envio / Alchemy, all listed in Arc's docs)
