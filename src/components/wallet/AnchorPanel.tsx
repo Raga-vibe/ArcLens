@@ -29,7 +29,7 @@ type Step =
 
 export function AnchorPanel({ report }: { report: WalletReport }) {
   const [step, setStep] = useState<Step>({ s: "idle" });
-  const [anchors, setAnchors] = useState<{ total: number; list: Anchor[]; failed?: boolean } | null>(null);
+  const [anchors, setAnchors] = useState<{ total: number; list: Anchor[]; deployed: boolean; failed?: boolean } | null>(null);
   const [refresh, setRefresh] = useState(0);
   const address = report.wallet.address;
 
@@ -38,17 +38,17 @@ export function AnchorPanel({ report }: { report: WalletReport }) {
   const intact = localHash === report.reportHash;
 
   useEffect(() => {
-    if (!REGISTRY_ADDRESS) return;
     const ctrl = new AbortController();
     fetch(`/api/anchors/${address}`, { signal: ctrl.signal })
       .then((r) => r.json())
-      .then((j) => setAnchors(j.ok ? { total: j.data.total, list: j.data.anchors } : { total: 0, list: [], failed: true }))
+      .then((j) => setAnchors(j.ok ? { total: j.data.total, list: j.data.anchors, deployed: j.data.deployed } : { total: 0, list: [], deployed: false, failed: true }))
       .catch((e) => {
-        if ((e as Error).name !== "AbortError") setAnchors({ total: 0, list: [], failed: true });
+        if ((e as Error).name !== "AbortError") setAnchors({ total: 0, list: [], deployed: false, failed: true });
       });
     return () => ctrl.abort();
   }, [address, refresh]);
 
+  const live = anchors?.deployed === true;
   const alreadyAnchored = anchors?.list.some((a) => a.reportHash === report.reportHash) ?? false;
 
   const downloadSnapshot = useCallback(() => {
@@ -62,7 +62,7 @@ export function AnchorPanel({ report }: { report: WalletReport }) {
   }, [report, address]);
 
   async function anchorOnArc() {
-    if (!REGISTRY_ADDRESS) return;
+    if (!live) return;
     let tx: Hex | undefined;
     try {
       setStep({ s: "connecting" });
@@ -122,7 +122,7 @@ export function AnchorPanel({ report }: { report: WalletReport }) {
             >
               Download snapshot (JSON)
             </button>
-            {REGISTRY_ADDRESS && (
+            {live && (
               <button
                 type="button"
                 onClick={anchorOnArc}
@@ -142,8 +142,12 @@ export function AnchorPanel({ report }: { report: WalletReport }) {
             )}
           </div>
           <div aria-live="polite" className="text-xs">
-            {!REGISTRY_ADDRESS && <p className="text-muted">On-chain anchoring turns on once the ArcLens registry contract is deployed.</p>}
-            {REGISTRY_ADDRESS && step.s === "idle" && !alreadyAnchored && (
+            {anchors && !live && !anchors.failed && (
+              <p className="text-muted">
+                Anchoring switches on automatically once the ArcLensRegistry contract is deployed to its reserved address on Arc mainnet.
+              </p>
+            )}
+            {live && step.s === "idle" && !alreadyAnchored && (
               <p className="text-muted">
                 {hasWallet() ? "Costs a network fee of well under one cent in USDC, paid from your wallet." : "Needs a browser wallet (MetaMask, Rabby…) with a little USDC on Arc."}
               </p>
@@ -168,10 +172,10 @@ export function AnchorPanel({ report }: { report: WalletReport }) {
 
         <div className="min-w-0">
           <p className="eyebrow mb-3">Anchored reports for this address</p>
-          {!REGISTRY_ADDRESS ? (
-            <p className="text-sm text-muted">No registry yet.</p>
-          ) : anchors === null ? (
+          {anchors === null ? (
             <div className="skeleton h-16 rounded-md" />
+          ) : !live && !anchors.failed ? (
+            <p className="text-sm text-muted">Registry not deployed yet.</p>
           ) : anchors.failed ? (
             <p className="text-sm text-muted">Couldn&apos;t load anchors right now.</p>
           ) : anchors.list.length === 0 ? (
@@ -192,9 +196,9 @@ export function AnchorPanel({ report }: { report: WalletReport }) {
               ))}
             </ul>
           )}
-          {REGISTRY_ADDRESS && (
+          {(
             <p className="mt-3 text-xs text-muted">
-              Registry: <ExternalLink href={explorerAddressUrl(REGISTRY_ADDRESS)}><span className="font-mono">{shortAddress(REGISTRY_ADDRESS)}</span></ExternalLink>
+              {live ? "Registry" : "Reserved registry address"}: <ExternalLink href={explorerAddressUrl(REGISTRY_ADDRESS)}><span className="font-mono">{shortAddress(REGISTRY_ADDRESS)}</span></ExternalLink>
               {anchors && anchors.total > anchors.list.length ? ` · showing ${anchors.list.length} of ${formatInt(anchors.total)}` : ""}
             </p>
           )}

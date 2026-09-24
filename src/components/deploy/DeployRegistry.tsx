@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { type Address, formatUnits, type Hex } from "viem";
+import { useEffect, useState } from "react";
+import { type Address, concat, formatUnits, type Hex } from "viem";
 import { CopyButton, ExternalLink } from "@/components/ui/primitives";
 import { explorerAddressUrl, explorerTxUrl, REGISTRY_ADDRESS } from "@/lib/arc/chain";
-import { registryAbi, registryBytecode } from "@/lib/arc/registry-artifact";
+import { create2Factory, registryBytecode, registrySalt } from "@/lib/arc/registry-artifact";
 import { connectArc, explainWalletError, readClient, walletClient } from "@/lib/wallet/arc-wallet";
 
 type State =
@@ -16,15 +16,26 @@ type State =
   | { s: "done"; tx: Hex; contract: Address; block: bigint }
   | { s: "error"; message: string; tx?: Hex };
 
+// Deployment goes through the canonical CREATE2 factory: calldata is salt ++ init code.
+const deployData = concat([registrySalt, registryBytecode]);
+
 const usd = (wei: bigint) => `$${Number(formatUnits(wei, 18)).toFixed(4)}`;
 
 export function DeployRegistry() {
   const [st, setSt] = useState<State>({ s: "idle" });
+  const [live, setLive] = useState<boolean | null>(null);
 
-  if (REGISTRY_ADDRESS) {
+  useEffect(() => {
+    fetch("/api/registry")
+      .then((r) => r.json())
+      .then((j) => setLive(j.ok ? j.data.deployed : null))
+      .catch(() => setLive(null));
+  }, []);
+
+  if (live && st.s !== "done") {
     return (
       <div className="panel mt-10 p-5 text-sm">
-        <p className="text-good">✓ The registry is already deployed and configured.</p>
+        <p className="text-good">✓ ArcLensRegistry is deployed on Arc mainnet, and anchoring is switched on.</p>
         <p className="mt-2 flex flex-wrap items-center gap-2 text-ink-2">
           <span className="font-mono text-xs">{REGISTRY_ADDRESS}</span>
           <ExternalLink href={explorerAddressUrl(REGISTRY_ADDRESS)}>Arc Explorer</ExternalLink>
@@ -41,7 +52,7 @@ export function DeployRegistry() {
       const [balance, gasPrice, gas] = await Promise.all([
         client.getBalance({ address: account }),
         client.getGasPrice(),
-        client.estimateGas({ account, data: registryBytecode }).catch(() => null),
+        client.estimateGas({ account, to: create2Factory, data: deployData }).catch(() => null),
       ]);
       setSt({ s: "ready", account, balance, cost: gas ? gas * gasPrice : null });
     } catch (e) {
@@ -53,11 +64,15 @@ export function DeployRegistry() {
     let tx: Hex | undefined;
     try {
       setSt({ s: "confirm", account });
-      tx = await walletClient(account).deployContract({ abi: registryAbi, bytecode: registryBytecode });
+      tx = await walletClient(account).sendTransaction({ to: create2Factory, data: deployData });
       setSt({ s: "pending", account, tx });
-      const receipt = await readClient().waitForTransactionReceipt({ hash: tx, timeout: 180_000 });
-      if (receipt.status !== "success" || !receipt.contractAddress) throw new Error("reverted");
-      setSt({ s: "done", tx, contract: receipt.contractAddress, block: receipt.blockNumber });
+      const client = readClient();
+      const receipt = await client.waitForTransactionReceipt({ hash: tx, timeout: 180_000 });
+      if (receipt.status !== "success") throw new Error("reverted");
+      const code = await client.getCode({ address: REGISTRY_ADDRESS });
+      if (!code || code === "0x") throw new Error("reverted");
+      setSt({ s: "done", tx, contract: REGISTRY_ADDRESS, block: receipt.blockNumber });
+      setLive(true);
     } catch (e) {
       setSt({ s: "error", message: explainWalletError(e).message, tx });
     }
@@ -70,6 +85,10 @@ export function DeployRegistry() {
         <li>2. Check you have a little USDC on Arc for the network fee.</li>
         <li>3. Click deploy and approve in your wallet.</li>
       </ol>
+      <p className="text-xs text-muted">
+        The contract is deployed with CREATE2, so its address is fixed in advance:{" "}
+        <span className="break-all font-mono">{REGISTRY_ADDRESS}</span>. ArcLens switches anchoring on as soon as code appears there.
+      </p>
 
       {(st.s === "idle" || st.s === "connecting") && (
         <button type="button" onClick={connect} disabled={st.s === "connecting"} className="rounded-[10px] bg-ink px-4 py-2.5 text-sm font-medium text-bg hover:bg-white disabled:opacity-60">
@@ -128,7 +147,7 @@ export function DeployRegistry() {
               <ExternalLink href={explorerTxUrl(st.tx)}>Arc Explorer</ExternalLink>
             </div>
           </div>
-          <p className="text-muted">Next: add this address to ArcLens (REGISTRY_DEPLOYED in src/lib/arc/chain.ts) so the &quot;Anchor on Arc&quot; button switches on.</p>
+          <p className="text-muted">The &quot;Anchor on Arc&quot; button on every wallet report is now switched on. No other setup is needed.</p>
         </div>
       )}
 

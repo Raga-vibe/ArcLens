@@ -1,4 +1,5 @@
 import type { Address, AddressLabel } from "@/lib/types";
+import { registryPredictedAddress } from "./registry-artifact";
 
 // Public, verified constants. Sources are listed in docs/arc-research.md.
 
@@ -11,13 +12,16 @@ export const ARC_MAINNET = {
 } as const;
 
 /**
- * ArcLensRegistry on Arc mainnet (contracts/ArcLensRegistry.sol).
- * null until deployed; NEXT_PUBLIC_REGISTRY_ADDRESS overrides.
+ * ArcLensRegistry on Arc mainnet (contracts/ArcLensRegistry.sol). Its address
+ * is fixed in advance by CREATE2 through the canonical factory, so the app
+ * switches anchoring on by itself once code exists there (checked at runtime).
+ * NEXT_PUBLIC_REGISTRY_ADDRESS overrides it (e.g. for a non-CREATE2 deploy).
  */
-const REGISTRY_DEPLOYED: Address | null = null;
 const envRegistry = process.env.NEXT_PUBLIC_REGISTRY_ADDRESS;
-export const REGISTRY_ADDRESS: Address | null =
-  envRegistry && /^0x[0-9a-fA-F]{40}$/.test(envRegistry) ? (envRegistry.toLowerCase() as Address) : REGISTRY_DEPLOYED;
+export const REGISTRY_ADDRESS: Address =
+  envRegistry && /^0x[0-9a-fA-F]{40}$/.test(envRegistry)
+    ? (envRegistry.toLowerCase() as Address)
+    : (registryPredictedAddress as Address);
 
 /** EIP-7708 system emitter for native USDC Transfer logs (18 decimals). */
 export const NATIVE_TRANSFER_EMITTER =

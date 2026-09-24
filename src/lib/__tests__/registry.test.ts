@@ -3,7 +3,7 @@ import { createEVM } from "@ethereumjs/evm";
 import { Account, Address, hexToBytes } from "@ethereumjs/util";
 import { decodeErrorResult, decodeFunctionResult, encodeFunctionData, type Hex, keccak256, toHex } from "viem";
 import { beforeAll, describe, expect, it } from "vitest";
-import { registryAbi, registryBytecode } from "@/lib/arc/registry-artifact";
+import { create2Factory, registryAbi, registryBytecode, registryPredictedAddress, registrySalt } from "@/lib/arc/registry-artifact";
 
 // Runs the compiled ArcLensRegistry bytecode on a real in-process EVM.
 
@@ -55,6 +55,28 @@ beforeAll(async () => {
   const r = await evm.runCall({ caller: alice, data: hexToBytes(registryBytecode), gasLimit: 3_000_000n, block: block(1n) });
   expect(r.execResult.exceptionError).toBeUndefined();
   registry = r.createdAddress!;
+});
+
+describe("deterministic deployment", () => {
+  it("lands at the predicted address when deployed through the CREATE2 factory", async () => {
+    // Canonical factory runtime, byte-identical to the code on Arc mainnet.
+    const factory = new Address(hexToBytes(create2Factory));
+    await evm.stateManager.putCode(
+      factory,
+      hexToBytes("0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe03601600081602082378035828234f58015156039578182fd5b8082525050506014600cf3"),
+    );
+    const r = await evm.runCall({
+      caller: bob,
+      to: factory,
+      data: hexToBytes(`${registrySalt}${registryBytecode.slice(2)}`),
+      gasLimit: 3_000_000n,
+      block: block(2n),
+    });
+    expect(r.execResult.exceptionError).toBeUndefined();
+    expect(toHex(r.execResult.returnValue)).toBe(registryPredictedAddress);
+    const code = await evm.stateManager.getCode(new Address(hexToBytes(registryPredictedAddress)));
+    expect(code.length).toBeGreaterThan(0);
+  });
 });
 
 describe("ArcLensRegistry (compiled bytecode)", () => {

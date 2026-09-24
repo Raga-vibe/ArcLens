@@ -14,11 +14,23 @@ export interface AnchorRecord {
   anchoredAt: number;
 }
 
+// Deployment status: once code exists it can't disappear, so a positive result
+// is cached forever; a negative one is rechecked after a short delay.
+let deployedCache: { deployed: boolean; at: number } | null = null;
+
+export async function isRegistryDeployed(): Promise<boolean> {
+  if (deployedCache?.deployed) return true;
+  if (deployedCache && Date.now() - deployedCache.at < 20_000) return false;
+  const code = await rpc<string>("eth_getCode", [REGISTRY_ADDRESS, "latest"]);
+  const deployed = !!code && code !== "0x";
+  deployedCache = { deployed, at: Date.now() };
+  return deployed;
+}
+
 async function callRegistry<N extends "recentAnchorsFor" | "anchorCountFor" | "anchorOf">(
   functionName: N,
   args: readonly unknown[],
 ) {
-  if (!REGISTRY_ADDRESS) throw new Error("registry not configured");
   const data = encodeFunctionData({ abi: registryAbi, functionName, args } as never);
   const ret = await rpc<Hex>("eth_call", [{ to: REGISTRY_ADDRESS, data }, "latest"]);
   return decodeFunctionResult({ abi: registryAbi, functionName, data: ret } as never) as unknown;

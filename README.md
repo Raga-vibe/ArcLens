@@ -38,8 +38,11 @@ ArcLens reads from Arc and writes proofs back to it.
   built in [`src/lib/analytics/snapshot.ts`](src/lib/analytics/snapshot.ts). The browser recomputes the hash to prove it matches.
 - Tested: the compiled bytecode runs against a real in-process EVM in
   [`src/lib/__tests__/registry.test.ts`](src/lib/__tests__/registry.test.ts) (anchoring, duplicates, invalid ranges, per-address listing).
-- Deploy: `/deploy` deploys it from your own browser wallet (about $0.01 in USDC gas). Then set `REGISTRY_DEPLOYED` in
-  [`src/lib/arc/chain.ts`](src/lib/arc/chain.ts), or set `NEXT_PUBLIC_REGISTRY_ADDRESS`.
+- Address fixed in advance: deployed with CREATE2 through the canonical factory `0x4e59b448…956c` (present on Arc mainnet),
+  salt `keccak256("arclens.registry.v1")`, so the registry lives at **`0xcbf8dc0b71802694aafd6adb2149043a165b3d7a`**.
+  ArcLens checks for code there at runtime and switches anchoring on automatically. A test proves the address on an in-process EVM,
+  and a simulated deployment against Arc mainnet returned the same address.
+- Deploy: `/deploy` deploys it from your own browser wallet (about $0.01 in USDC gas). No config change needed afterwards.
 - Rebuild the ABI and bytecode after editing the contract: `npm run compile:contract`.
 
 ## Why Arc
@@ -118,7 +121,7 @@ See [`.env.example`](.env.example).
 | `NEXT_PUBLIC_GITHUB_URL`, `NEXT_PUBLIC_X_URL` | public | placeholders | Footer links |
 | `NEXT_PUBLIC_CONTACT_EMAIL` | public | empty | Contact on legal pages |
 | `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` | public | empty (off) | Optional cookieless analytics |
-| `NEXT_PUBLIC_REGISTRY_ADDRESS` | public | unset | ArcLensRegistry address (overrides `REGISTRY_DEPLOYED`) |
+| `NEXT_PUBLIC_REGISTRY_ADDRESS` | public | CREATE2 address | Override the ArcLensRegistry address |
 | `ARC_RPC_URLS` | **server** | Arc public RPC | Comma-separated RPC URLs (may contain keys) |
 | `ARC_LOG_BLOCK_RANGE` | server | `10000` | Block span per `eth_getLogs` |
 | `ARC_RPC_CONCURRENCY` / `ARC_RPC_MIN_INTERVAL_MS` | server | `3` / `380` | Pacing per endpoint (public RPC sustains ~2.5 req/s) |

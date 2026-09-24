@@ -2,11 +2,11 @@ import Link from "next/link";
 import { HeroNetwork } from "@/components/landing/HeroNetwork";
 import { LandingView } from "@/components/landing/LandingView";
 import { LiveBlock } from "@/components/landing/LiveBlock";
+import { ProofFacts } from "@/components/landing/ProofFacts";
 import { Reveal } from "@/components/motion/Reveal";
 import { AnalyzeInput } from "@/components/search/AnalyzeInput";
 import { Footer } from "@/components/site/Footer";
 import { Header } from "@/components/site/Header";
-import { REGISTRY_ADDRESS } from "@/lib/arc/chain";
 import { EXAMPLE_ADDRESS } from "@/lib/site";
 
 export default function Home() {
@@ -305,18 +305,6 @@ const ARC_FACTS = [
   ["Every USDC movement is a log", "Arc implements EIP-7708: native USDC transfers emit standard Transfer events from a system address. That's what ArcLens reads."],
   ["Deterministic finality", "Transactions are final when included. A report never shows activity that could later be reorganized away."],
   ["Standard EVM JSON-RPC", "ArcLens uses Arc's public RPC. No proprietary API, no keys, and the source can be swapped for an indexer."],
-  ...(REGISTRY_ADDRESS
-    ? [
-        [
-          "Proof written back to Arc",
-          "Any report's fingerprint can be anchored on Arc mainnet through the ArcLensRegistry contract, so anyone can verify it later.",
-        ],
-        [
-          "Fees in cents, paid in USDC",
-          "Anchoring a report costs well under a cent, paid in USDC from the user's own wallet. Nothing to bridge, no gas token to buy.",
-        ],
-      ]
-    : []),
 ];
 
 function BuiltForArc() {
@@ -339,6 +327,7 @@ function BuiltForArc() {
               <dd className="mt-2 text-sm leading-relaxed text-muted">{b}</dd>
             </Reveal>
           ))}
+          <ProofFacts />
         </dl>
       </div>
     </section>
