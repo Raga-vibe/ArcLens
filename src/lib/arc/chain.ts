@@ -10,6 +10,15 @@ export const ARC_MAINNET = {
   publicLaunch: "2026-09-16",
 } as const;
 
+/**
+ * ArcLensRegistry on Arc mainnet (contracts/ArcLensRegistry.sol).
+ * null until deployed; NEXT_PUBLIC_REGISTRY_ADDRESS overrides.
+ */
+const REGISTRY_DEPLOYED: Address | null = null;
+const envRegistry = process.env.NEXT_PUBLIC_REGISTRY_ADDRESS;
+export const REGISTRY_ADDRESS: Address | null =
+  envRegistry && /^0x[0-9a-fA-F]{40}$/.test(envRegistry) ? (envRegistry.toLowerCase() as Address) : REGISTRY_DEPLOYED;
+
 /** EIP-7708 system emitter for native USDC Transfer logs (18 decimals). */
 export const NATIVE_TRANSFER_EMITTER =
   "0xfffffffffffffffffffffffffffffffffffffffe" as Address;

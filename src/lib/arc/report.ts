@@ -9,6 +9,7 @@ import {
   comparePeriods,
 } from "@/lib/analytics/stats";
 import { generateWalletSummary } from "@/lib/analytics/summary";
+import { buildSnapshot, hashSnapshot } from "@/lib/analytics/snapshot";
 import { buildTransactionInsight } from "@/lib/analytics/transaction";
 import type {
   Address,
@@ -19,7 +20,7 @@ import type {
   WalletReport,
   WindowKey,
 } from "@/lib/types";
-import { labelFor } from "./chain";
+import { ARC_MAINNET, labelFor } from "./chain";
 import { serverConfig } from "./config";
 import {
   getAddressKinds,
@@ -68,7 +69,7 @@ async function computeWalletReport(
 ): Promise<WalletReport> {
   hooks.stage?.("connect");
   const latest = await getLatestBlock();
-  const [window, snapshot] = await Promise.all([
+  const [window, account] = await Promise.all([
     resolveWindow(windowKey, latest),
     getWalletSnapshot(address),
   ]);
@@ -109,14 +110,16 @@ async function computeWalletReport(
     transactions,
   });
 
+  const snapshot = buildSnapshot(ARC_MAINNET.chainId, address, window, transactions, counterparties);
+
   return {
     wallet: {
       address,
-      isContract: snapshot.isContract,
+      isContract: account.isContract,
       label: labelFor(address),
-      balance: toUnits(snapshot.balanceRaw, 18),
-      balanceRaw: snapshot.balanceRaw.toString(),
-      nonce: snapshot.nonce,
+      balance: toUnits(account.balanceRaw, 18),
+      balanceRaw: account.balanceRaw.toString(),
+      nonce: account.nonce,
     },
     window,
     latestBlock: latest,
@@ -138,6 +141,8 @@ async function computeWalletReport(
         "Arc mainnet JSON-RPC · EIP-7708 native USDC Transfer logs (emitter 0xfff…fffe)",
       maxWindow: serverConfig.maxWindow,
     },
+    snapshot,
+    reportHash: hashSnapshot(snapshot),
   };
 }
 

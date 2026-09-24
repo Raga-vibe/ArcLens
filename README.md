@@ -26,6 +26,21 @@ ArcLens retrieves an address's USDC activity directly from Arc mainnet, normaliz
 - **Summary and insights**: sentences generated only from computed numbers (peak hours, concentration, skew, period-over-period change).
   No attribution, no speculation.
 - **Transaction page**: status, USDC legs, other token transfer logs, gas fee in USDC, sender nonce, and finality.
+- **Proof on Arc**: every report has a keccak-256 fingerprint of its data. Anyone can **anchor** it on Arc mainnet through the
+  `ArcLensRegistry` contract from their own wallet, and download the snapshot JSON to verify it later.
+
+## On-chain component: ArcLensRegistry
+ArcLens reads from Arc and writes proofs back to it.
+
+- Contract: [`contracts/ArcLensRegistry.sol`](contracts/ArcLensRegistry.sol). No owner, no fees, holds no funds. It stores
+  `(reportHash, subject, anchoredBy, fromBlock, toBlock, anchoredAt)` and emits `ReportAnchored`.
+- Fingerprint: `keccak256` of a canonical JSON snapshot (exact raw 18-decimal USDC totals, counts, block range, top counterparties),
+  built in [`src/lib/analytics/snapshot.ts`](src/lib/analytics/snapshot.ts). The browser recomputes the hash to prove it matches.
+- Tested: the compiled bytecode runs against a real in-process EVM in
+  [`src/lib/__tests__/registry.test.ts`](src/lib/__tests__/registry.test.ts) (anchoring, duplicates, invalid ranges, per-address listing).
+- Deploy: `/deploy` deploys it from your own browser wallet (about $0.01 in USDC gas). Then set `REGISTRY_DEPLOYED` in
+  [`src/lib/arc/chain.ts`](src/lib/arc/chain.ts), or set `NEXT_PUBLIC_REGISTRY_ADDRESS`.
+- Rebuild the ABI and bytecode after editing the contract: `npm run compile:contract`.
 
 ## Why Arc
 - USDC is Arc's native gas token, so activity is dollar-denominated with no price feed.
@@ -50,7 +65,7 @@ Arc data provider     src/lib/arc/provider.ts   ← swap for an indexer here
    ▼
 JSON-RPC client       src/lib/arc/rpc.ts        ← throttle, failover, backoff
    ▼
-Arc mainnet RPC (rpc.mainnet.arc.io, arc.drpc.org)
+Arc mainnet RPC (rpc.mainnet.arc.io)
 
 Pure analytics (unit-tested, no I/O):
   src/lib/analytics/normalize.ts   normalizeTransaction · toWalletTransactions
@@ -66,17 +81,17 @@ Pure analytics (unit-tested, no I/O):
 - **motion** for purposeful animation (respects `prefers-reduced-motion`)
 - **d3-scale / d3-shape** plus hand-built SVG charts (no heavy chart library)
 - **Vitest** for unit tests
-- No database, no wallet connection, no accounts
+- **viem** for ABI encoding and the optional browser-wallet flow; **solc** + **@ethereumjs/evm** to compile and test the contract
+- No database, no accounts; a wallet is only needed to anchor
 
 ## Data sources
 | Source | Used for |
 | --- | --- |
 | `https://rpc.mainnet.arc.io` (official Arc RPC) | Logs, balances, nonces, bytecode, transactions, receipts |
-| `https://arc.drpc.org` (dRPC, a listed Arc node provider) | Fallback RPC |
 | [docs.arc.io contract addresses](https://docs.arc.io/arc/references/contract-addresses) | The only source of named labels |
 
 **Limitation:** public RPCs cap `eth_getLogs` at 10,000 blocks (~83 minutes) and are rate-limited, so the default deployment analyzes
-**24h / 3d / 7d windows**. Every report states its exact block range. To analyze longer windows, point `ARC_RPC_URLS` at a provider that
+**24h and 3d windows**. Every report states its exact block range. To analyze longer windows, point `ARC_RPC_URLS` at a provider that
 supports larger log ranges, raise `ARC_LOG_BLOCK_RANGE`, and set `ARC_MAX_WINDOW`.
 
 ## Local setup
@@ -88,7 +103,7 @@ npm run dev                  # http://localhost:3000
 
 Other scripts:
 ```bash
-npm test          # unit tests (analytics + validation)
+npm test          # unit tests (analytics, validation, snapshot, contract on an in-process EVM)
 npm run lint
 npm run typecheck
 npm run build
@@ -103,10 +118,11 @@ See [`.env.example`](.env.example).
 | `NEXT_PUBLIC_GITHUB_URL`, `NEXT_PUBLIC_X_URL` | public | placeholders | Footer links |
 | `NEXT_PUBLIC_CONTACT_EMAIL` | public | empty | Contact on legal pages |
 | `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` | public | empty (off) | Optional cookieless analytics |
-| `ARC_RPC_URLS` | **server** | Arc public + dRPC | Comma-separated RPC URLs (may contain keys) |
+| `NEXT_PUBLIC_REGISTRY_ADDRESS` | public | unset | ArcLensRegistry address (overrides `REGISTRY_DEPLOYED`) |
+| `ARC_RPC_URLS` | **server** | Arc public RPC | Comma-separated RPC URLs (may contain keys) |
 | `ARC_LOG_BLOCK_RANGE` | server | `10000` | Block span per `eth_getLogs` |
-| `ARC_RPC_CONCURRENCY` / `ARC_RPC_MIN_INTERVAL_MS` | server | `2` / `220` | Throttling per endpoint |
-| `ARC_MAX_WINDOW` | server | `7d` | Largest analysis window offered |
+| `ARC_RPC_CONCURRENCY` / `ARC_RPC_MIN_INTERVAL_MS` | server | `3` / `380` | Pacing per endpoint (public RPC sustains ~2.5 req/s) |
+| `ARC_MAX_WINDOW` | server | `3d` | Largest analysis window offered |
 | `ARC_RATE_LIMIT_PER_MINUTE` | server | `12` | Analyses per IP per minute |
 
 ## Security notes
@@ -143,9 +159,9 @@ Built for **Arc Microgrants** on DoraHacks.
 ## Future possibilities
 - Indexer-backed full-history reports (Goldsky / Envio / Alchemy, all listed in Arc's docs)
 - EURC and multi-token analytics
-- Optional on-chain report attestation on Arc
-- CSV / PNG export
+- Verify page: paste a snapshot JSON and check it against the registry
+- CSV / PNG export (JSON snapshot export exists)
 
 ## License
-Not yet chosen. Add a `LICENSE` file before making the repo public. Fonts under `src/assets/fonts` are licensed under the SIL Open
+Not yet chosen for the app code (the contract is MIT-licensed via its SPDX header). Fonts under `src/assets/fonts` are licensed under the SIL Open
 Font License (see the license files there).

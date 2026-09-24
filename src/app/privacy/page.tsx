@@ -12,10 +12,10 @@ const analyticsEnabled = !!process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN;
 
 export default function PrivacyPage() {
   return (
-    <LegalPage title="Privacy Policy" updated="23 September 2026">
+    <LegalPage title="Privacy Policy" updated="24 September 2026">
       <p>
-        ArcLens is an experimental, read-only analytics tool for public data on the Arc blockchain. It is designed to collect as little
-        as possible. There are no accounts, no sign-in, and no wallet connection.
+        ArcLens is an experimental analytics tool for public data on the Arc blockchain. It is designed to collect as little as possible.
+        There are no accounts and no sign-in, and you don&apos;t need to connect a wallet to use it.
       </p>
 
       <h2>What you submit</h2>
@@ -42,6 +42,15 @@ export default function PrivacyPage() {
         </li>
       </ul>
 
+      <h2>Wallet connection and on-chain anchors (optional)</h2>
+      <p>
+        You can optionally connect a browser wallet to <strong>anchor a report on Arc</strong>. The connection happens entirely between
+        your browser and your wallet. ArcLens never receives your private keys or seed phrase, and it never sends your wallet address to
+        its server. If you approve an anchor transaction, the following becomes <strong>permanently public on the Arc blockchain</strong>:
+        your wallet address (as the sender), the analyzed address, the report&apos;s block range, and the report fingerprint (a hash). Blockchain
+        records can&apos;t be edited or deleted by ArcLens or anyone else. Only anchor if you&apos;re comfortable with that.
+      </p>
+
       <h2>Cookies and local storage</h2>
       <p>
         ArcLens does not set cookies and does not use browser storage to track you. Because no non-essential cookies are used, there is no
@@ -62,9 +71,9 @@ export default function PrivacyPage() {
       <h2>Third parties</h2>
       <ul>
         <li>
-          <strong>Arc RPC providers.</strong> To answer your query, the ArcLens server sends the address or hash you submitted to Arc
-          JSON-RPC endpoints: Arc&apos;s public RPC (<code>rpc.mainnet.arc.io</code>) and, as a fallback, dRPC&apos;s public Arc endpoint.
-          Your IP address is <em>not</em> forwarded. These providers see the ArcLens server, not you.
+          <strong>Arc RPC.</strong> To answer your query, the ArcLens server sends the address or hash you submitted to Arc&apos;s public
+          JSON-RPC endpoint (<code>rpc.mainnet.arc.io</code>). Your IP address is <em>not</em> forwarded: the RPC sees the ArcLens server,
+          not you.
         </li>
         <li>
           <strong>Hosting.</strong> ArcLens is served by a hosting provider that, like any web server, processes standard request data

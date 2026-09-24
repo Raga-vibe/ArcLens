@@ -11,7 +11,7 @@
   --ink: #f4f4f0;
   --ink-2: #c5c8ce;
   --muted: #8e949f;
-  --faint: #5d636d;
+  --faint: #7c828c; /* ≥4.5:1 on bg, surface and elevated (WCAG AA) */
   --line: rgba(255, 255, 255, 0.08);
   --line-strong: rgba(255, 255, 255, 0.14);
 

@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <LegalPage title="Terms of Use" updated="23 September 2026">
+    <LegalPage title="Terms of Use" updated="24 September 2026">
       <p>
         By using ArcLens you agree to these terms. If you don&apos;t agree, please don&apos;t use the site.
       </p>
@@ -40,6 +40,14 @@ export default function TermsPage() {
         ArcLens does not claim that any address belongs to a particular person or organization. It only shows a name when that name comes
         from verified public information, such as Arc&apos;s official contract-address documentation. Labels like
         “Contract” or “Account” describe on-chain properties only.
+      </p>
+
+      <h2>On-chain anchors</h2>
+      <p>
+        Anchoring a report sends a transaction from your own wallet to the ArcLensRegistry contract on Arc mainnet. You pay the network fee,
+        and the transaction is permanent and public. An anchor proves only that a report with a given fingerprint existed at a given block. It
+        does not certify that the analysis is complete or correct, and it is not an endorsement of any address. The contract has no owner,
+        charges no fee, and holds no funds.
       </p>
 
       <h2>Acceptable use</h2>

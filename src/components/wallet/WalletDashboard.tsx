@@ -19,6 +19,7 @@ import {
   shortAddress,
 } from "@/lib/format";
 import type { WalletInsight, WalletReport, WindowKey } from "@/lib/types";
+import { AnchorPanel } from "./AnchorPanel";
 import { CounterpartyTable } from "./CounterpartyTable";
 import { TransactionExplorer } from "./TransactionExplorer";
 
@@ -153,6 +154,8 @@ export function WalletDashboard({ report }: { report: WalletReport }) {
       </dl>
 
       <SummaryPanel report={report} />
+
+      <AnchorPanel report={report} />
 
       {empty ? (
         <Panel title="Activity" eyebrow="Time series">

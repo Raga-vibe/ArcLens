@@ -16,9 +16,9 @@ export const SITE = {
 };
 
 /**
- * Example wallet for "Try an example". This is a real, highly active Arc
+ * Example wallet for "Try an example". This is a real, moderately active Arc
  * mainnet contract (verified on-chain: has bytecode, appears in EIP-7708
  * Transfer logs). It is a contract, not a personal wallet, and ArcLens makes
  * no claim about who operates it.
  */
-export const EXAMPLE_ADDRESS = "0x43d894e229a008c72e96872739719b9cfda941d5";
+export const EXAMPLE_ADDRESS = "0xcbbccdfcd209deca1b564436060fff13fa2db59c";

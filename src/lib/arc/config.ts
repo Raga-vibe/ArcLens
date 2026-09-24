@@ -5,10 +5,11 @@ import { isWindowKey } from "@/lib/validate";
 // Server-only configuration. RPC URLs may embed provider API keys, so they
 // must never be exposed via NEXT_PUBLIC_* variables.
 
-const DEFAULT_RPCS = [
-  "https://rpc.mainnet.arc.io", // official public RPC (docs.arc.io)
-  "https://arc.drpc.org", // dRPC public endpoint (dRPC is a listed node provider)
-];
+// Official public RPC (docs.arc.io). dRPC's free public endpoint also serves
+// Arc, but (tested 2026-09-24) caps eth_getLogs below 1,000 blocks and omits
+// blockTimestamp, which makes log scans slower. Add it via ARC_RPC_URLS only
+// if you want extra failover.
+const DEFAULT_RPCS = ["https://rpc.mainnet.arc.io"];
 
 function int(name: string, fallback: number, min: number, max: number) {
   const raw = process.env[name];
@@ -32,14 +33,17 @@ export const serverConfig = {
   /** Inclusive block span per eth_getLogs call. Public RPCs cap at 10,000. */
   logBlockRange: int("ARC_LOG_BLOCK_RANGE", 10_000, 100, 10_000_000),
   /** Parallel requests per RPC endpoint. */
-  concurrencyPerEndpoint: int("ARC_RPC_CONCURRENCY", 2, 1, 32),
-  /** Minimum spacing between requests on one endpoint. */
-  minIntervalMs: int("ARC_RPC_MIN_INTERVAL_MS", 220, 0, 5_000),
+  concurrencyPerEndpoint: int("ARC_RPC_CONCURRENCY", 3, 1, 32),
+  /**
+   * Minimum spacing between requests on one endpoint. The public Arc RPC
+   * sustains ~2.5 req/s when paced evenly (measured); bursts get rate-limited.
+   */
+  minIntervalMs: int("ARC_RPC_MIN_INTERVAL_MS", 380, 0, 5_000),
   requestTimeoutMs: int("ARC_RPC_TIMEOUT_MS", 15_000, 1_000, 60_000),
   /** Largest scan window this deployment will serve. */
   maxWindow: (isWindowKey(process.env.ARC_MAX_WINDOW)
     ? process.env.ARC_MAX_WINDOW
-    : "7d") as WindowKey,
+    : "3d") as WindowKey,
   /** Wallet analyses per IP per minute. */
   rateLimitPerMinute: int("ARC_RATE_LIMIT_PER_MINUTE", 12, 1, 1_000),
 };

@@ -1,3 +1,5 @@
+import type { ReportSnapshot } from "@/lib/analytics/snapshot";
+
 // Shared domain types. Everything here is serialisable (no bigint) so it can
 // cross the server → client boundary as JSON.
 
@@ -165,6 +167,9 @@ export interface WalletReport {
   summary: string[];
   insights: WalletInsight[];
   source: DataSourceInfo;
+  /** Canonical data core of the report; its hash can be anchored on Arc. */
+  snapshot: ReportSnapshot;
+  reportHash: Hex;
 }
 
 export interface DataSourceInfo {
