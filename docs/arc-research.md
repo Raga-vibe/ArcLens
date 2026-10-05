@@ -112,14 +112,11 @@ Source: [dorahacks.io/hackathon/arc-microgrants/detail](https://dorahacks.io/hac
 - **What they look for:** "Relevance to Arc, technical credibility, the quality of what you built, and
   whether the project is worth taking further. Promise counts for more than traction here."
 
-### Open question: what does "deployed on Arc mainnet" mean for a read-only app?
-The page says "Submit a project that is already deployed and working on Arc mainnet" and notes that
-"Arc uses USDC to pay gas, so you will need a small amount of USDC on Arc to deploy and transact". That
-second line implies but doesn't strictly require an on-chain contract. ArcLens is a read-only app that
-works against Arc mainnet data. **Reviewers may or may not treat this as "deployed on Arc mainnet".**
-One way to remove the ambiguity is a small on-chain component, for example a minimal contract that
-anchors a hash of a published report. That is listed as a future option in
-`docs/hackathon-positioning.md` and is *not* implemented. This is a product decision for the builder.
+ArcLens now includes an on-chain component as well as its live Arc mainnet data path. The
+`ArcLensRegistry` contract is deployed at `0xcbf8dc0b71802694aafd6adb2149043a165b3d7a`. The app reads
+native USDC activity from Arc mainnet and lets a user anchor a report fingerprint in the registry.
+This deployment status was confirmed by the project builder on 2026-10-05; verify the address on Arc
+Explorer before submission if you need an independent deployment link.
 
 ## 6. Brand notes (for the visual accent)
 `arc.io` (checked 2026-09-23) uses a light layout with deep navy (`rgb(27,49,88)`), mid blue

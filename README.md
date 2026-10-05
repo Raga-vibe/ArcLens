@@ -42,7 +42,7 @@ ArcLens reads from Arc and writes proofs back to it.
   salt `keccak256("arclens.registry.v1")`, so the registry lives at **`0xcbf8dc0b71802694aafd6adb2149043a165b3d7a`**.
   ArcLens checks for code there at runtime and switches anchoring on automatically. A test proves the address on an in-process EVM,
   and a simulated deployment against Arc mainnet returned the same address.
-- Deploy: `/deploy` deploys it from your own browser wallet (about $0.01 in USDC gas). No config change needed afterwards.
+- Deployment: the registry is deployed on Arc mainnet at **`0xcbf8dc0b71802694aafd6adb2149043a165b3d7a`** ([view on Arc Explorer](https://explorer.arc.io/address/0xcbf8dc0b71802694aafd6adb2149043a165b3d7a)). ArcLens checks for code at this address and enables report anchoring automatically.
 - Rebuild the ABI and bytecode after editing the contract: `npm run compile:contract`.
 
 ## Why Arc
