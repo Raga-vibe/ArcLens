@@ -151,7 +151,18 @@ Designed for Vercel (or any Node host):
 `/api/wallet/*` streams for up to 120 s (`maxDuration`). Make sure your plan allows it.
 
 ## Screenshots
-_Add after deployment: landing hero, wallet dashboard, flow diagram, transaction page._
+
+### Landing page
+
+![ArcLens landing page on Arc mainnet](docs/screenshots/arclens-landing.png)
+
+### Wallet intelligence report
+
+![Wallet report with activity statistics and computed insights](docs/screenshots/arclens-wallet-report.png)
+
+### Proof anchored on Arc
+
+![Report fingerprint and anchored report record on Arc](docs/screenshots/arclens-proof-on-arc.png)
 
 ## Demo
 **Live:** https://arclens-three.vercel.app
