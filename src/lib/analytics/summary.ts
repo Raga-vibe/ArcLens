@@ -2,10 +2,10 @@ import {
   DAY_NAMES,
   formatDateTime,
   formatDuration,
+  formatAssetValue,
   formatHour,
   formatInt,
   formatPct,
-  formatUsd,
   shortAddress,
 } from "@/lib/format";
 import type {
@@ -17,6 +17,7 @@ import type {
   WalletInsight,
   WalletStats,
 } from "@/lib/types";
+import type { NetworkKey, WalletAsset } from "@/lib/networks";
 import { sum } from "./stats";
 
 // Every sentence produced here is a direct restatement of a computed number.
@@ -29,6 +30,8 @@ export interface SummaryInput {
   heatmap: ActivityHeatmapPoint[];
   counterparties: Counterparty[];
   transactions: Transaction[];
+  asset?: WalletAsset;
+  network?: NetworkKey;
 }
 
 const plural = (n: number, one: string, many = `${one}s`) => `${formatInt(n)} ${n === 1 ? one : many}`;
@@ -64,13 +67,17 @@ export function generateWalletSummary(input: SummaryInput): {
   insights: WalletInsight[];
 } {
   const { stats: s, window: w, comparison: cmp, heatmap, counterparties } = input;
+  const network = input.network ?? "arc-mainnet";
+  const asset: WalletAsset = input.asset ?? { key: "native", symbol: "USDC", decimals: 18, address: null, kind: "native" };
+  const amount = (value: number, compact = false) => formatAssetValue(value, asset, network, { compact });
+  const movementName = `${asset.symbol} transfer`;
   const span = formatDuration(w.toTimestamp - w.fromTimestamp);
   const range = `blocks ${formatInt(w.fromBlock)}–${formatInt(w.toBlock)}`;
 
   if (s.transferCount === 0) {
     return {
       summary: [
-        `No USDC transfers involving this address were found in the analyzed window (${span}, ${range}).`,
+        `No ${asset.symbol} transfers involving this address were found in the analyzed window (${span}, ${range}).`,
       ],
       insights: [],
     };
@@ -78,16 +85,16 @@ export function generateWalletSummary(input: SummaryInput): {
 
   const summary: string[] = [];
   summary.push(
-    `Over the analyzed ${span} (${range}), this address recorded ${plural(s.transferCount, "USDC transfer")} in ${plural(s.txCount, "transaction")}, moving ${formatUsd(s.totalVolume)} with ${plural(s.uniqueCounterparties, "counterparty", "counterparties")}.`,
+    `Over the analyzed ${span} (${range}), this address recorded ${plural(s.transferCount, movementName)} in ${plural(s.txCount, "transaction")}, moving ${amount(s.totalVolume)} with ${plural(s.uniqueCounterparties, "counterparty", "counterparties")}.`,
   );
   const inPart = s.inCount
-    ? `${formatUsd(s.inVolume)} came in across ${plural(s.inCount, "transfer")}`
+    ? `${amount(s.inVolume)} came in across ${plural(s.inCount, "transfer")}`
     : "nothing came in";
   const outPart = s.outCount
-    ? `${formatUsd(s.outVolume)} went out across ${plural(s.outCount, "transfer")}`
+    ? `${amount(s.outVolume)} went out across ${plural(s.outCount, "transfer")}`
     : "nothing went out";
   summary.push(
-    `${inPart[0].toUpperCase()}${inPart.slice(1)}; ${outPart}. Net flow: ${s.netFlow >= 0 ? "+" : ""}${formatUsd(s.netFlow)}.`,
+    `${inPart[0].toUpperCase()}${inPart.slice(1)}; ${outPart}. Net flow: ${s.netFlow >= 0 ? "+" : ""}${amount(s.netFlow)}.`,
   );
 
   if (cmp && cmp.previousCount > 0 && cmp.currentCount > 0 && cmp.countChange !== null) {
@@ -136,7 +143,7 @@ export function generateWalletSummary(input: SummaryInput): {
       insights.push({
         id: "top-counterparty",
         title: "One counterparty dominates volume",
-        body: `${shortAddress(top.address)} accounts for ${formatPct(share)} of all USDC volume (${formatUsd(top.totalVolume)}) in the window.`,
+        body: `${shortAddress(top.address)} accounts for ${formatPct(share)} of all ${asset.symbol} volume (${amount(top.totalVolume)}) in the window.`,
         tone: "notice",
         metric: formatPct(share),
       });
@@ -168,7 +175,7 @@ export function generateWalletSummary(input: SummaryInput): {
       insights.push({
         id: "skew",
         title: "A few large transfers drive volume",
-        body: `The average transfer (${formatUsd(s.average)}) is ${ratio.toFixed(1)}× the median (${formatUsd(s.median)}).`,
+        body: `The average transfer (${amount(s.average)}) is ${ratio.toFixed(1)}× the median (${amount(s.median)}).`,
         tone: "neutral",
         metric: `${ratio.toFixed(1)}×`,
       });
@@ -180,9 +187,9 @@ export function generateWalletSummary(input: SummaryInput): {
     insights.push({
       id: "largest",
       title: "Largest transfer",
-      body: `${formatUsd(s.largest.value)} ${s.largest.direction === "in" ? "received" : "sent"} on ${formatDateTime(s.largest.timestamp)}: ${share < 0.01 ? "<1%" : formatPct(share)} of window volume.`,
+      body: `${amount(s.largest.value)} ${s.largest.direction === "in" ? "received" : "sent"} on ${formatDateTime(s.largest.timestamp)}: ${share < 0.01 ? "<1%" : formatPct(share)} of window volume.`,
       tone: "neutral",
-      metric: formatUsd(s.largest.value, { compact: true }),
+      metric: amount(s.largest.value, true),
     });
   }
 
@@ -201,7 +208,7 @@ export function generateWalletSummary(input: SummaryInput): {
     insights.push({
       id: "volume-trend",
       title: up ? "Volume increased" : "Volume decreased",
-      body: `USDC volume in the second half of the window was ${formatUsd(cmp.currentVolume)}, versus ${formatUsd(cmp.previousVolume)} in the first half.`,
+      body: `${asset.symbol} volume in the second half of the window was ${amount(cmp.currentVolume)}, versus ${amount(cmp.previousVolume)} in the first half.`,
       tone: up ? "positive" : "negative",
       metric: `${up ? "+" : "−"}${Math.round(Math.abs(cmp.volumeChange) * 100)}%`,
     });

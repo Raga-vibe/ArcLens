@@ -1,5 +1,7 @@
 import "server-only";
 import type { WindowKey } from "@/lib/types";
+import type { NetworkKey } from "@/lib/networks";
+import { robinhoodConfig } from "@/lib/robinhood/config";
 import { isWindowKey } from "@/lib/validate";
 
 // Server-only configuration. RPC URLs may embed provider API keys, so they
@@ -61,6 +63,7 @@ export const WINDOW_SECONDS: Record<WindowKey, number | null> = {
 
 const ORDER: WindowKey[] = ["24h", "3d", "7d", "30d", "all"];
 
-export function allowedWindows(): WindowKey[] {
-  return ORDER.slice(0, ORDER.indexOf(serverConfig.maxWindow) + 1);
+export function allowedWindows(network: NetworkKey = "arc-mainnet"): WindowKey[] {
+  const maxWindow = network === "robinhood-testnet" ? robinhoodConfig.maxWindow : serverConfig.maxWindow;
+  return ORDER.slice(0, ORDER.indexOf(maxWindow) + 1);
 }

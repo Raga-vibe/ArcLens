@@ -111,8 +111,8 @@ export function AnchorPanel({ report }: { report: WalletReport }) {
           </div>
           <p className="text-xs leading-relaxed text-muted">
             The fingerprint covers blocks {formatInt(report.window.fromBlock)}–{formatInt(report.window.toBlock)}: transfer counts,
-            exact raw USDC totals and top counterparties. Download the snapshot and hash it with keccak-256 to check it against the
-            chain yourself.
+            exact raw {report.asset.symbol} totals and top counterparties for {report.networkName}. Download the snapshot and hash it
+            with keccak-256 to check it yourself.
           </p>
           <div className="flex flex-wrap gap-2">
             <button

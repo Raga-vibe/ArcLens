@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useId, useMemo, useState, useTransition } from "react";
 import { EXAMPLE_ADDRESS } from "@/lib/site";
 import { classifyInput, MAX_INPUT_LENGTH } from "@/lib/validate";
+import { NETWORK_OPTIONS, type NetworkKey } from "@/lib/networks";
 
 interface Props {
   size?: "hero" | "compact";
@@ -15,6 +16,7 @@ export function AnalyzeInput({ size = "hero", autoFocus, showExample }: Props) {
   const router = useRouter();
   const id = useId();
   const [value, setValue] = useState("");
+  const [network, setNetwork] = useState<NetworkKey>("arc-mainnet");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const kind = useMemo(() => classifyInput(value), [value]);
@@ -23,7 +25,7 @@ export function AnalyzeInput({ size = "hero", autoFocus, showExample }: Props) {
   function go(target: string) {
     const k = classifyInput(target);
     if (k.kind === "empty") {
-      setError("Paste an Arc wallet address or transaction hash to begin.");
+      setError("Paste a wallet address or transaction hash to begin.");
       return;
     }
     if (k.kind === "invalid") {
@@ -32,7 +34,7 @@ export function AnalyzeInput({ size = "hero", autoFocus, showExample }: Props) {
     }
     setError(null);
     startTransition(() => {
-      router.push(k.kind === "address" ? `/wallet/${k.value}` : `/tx/${k.value}`);
+      router.push(`${k.kind === "address" ? `/wallet/${k.value}` : `/tx/${k.value}`}?network=${network}`);
     });
   }
 
@@ -49,7 +51,7 @@ export function AnalyzeInput({ size = "hero", autoFocus, showExample }: Props) {
     <div className="w-full">
       <form
         role="search"
-        aria-label="Analyze an Arc address or transaction"
+        aria-label="Analyze an address or transaction"
         noValidate
         onSubmit={(e) => {
           e.preventDefault();
@@ -60,7 +62,7 @@ export function AnalyzeInput({ size = "hero", autoFocus, showExample }: Props) {
         } focus-within:shadow-[0_0_0_4px_rgba(169,196,240,0.08)] ${hero ? "flex-wrap p-2 pl-4 sm:flex-nowrap sm:pl-5" : "p-1 pl-3"}`}
       >
         <label htmlFor={id} className="sr-only">
-          Arc wallet address or transaction hash
+          Wallet address or transaction hash
         </label>
         <svg aria-hidden="true" viewBox="0 0 20 20" className={`shrink-0 text-muted ${hero ? "size-5" : "size-4"}`} fill="none">
           <circle cx="9" cy="9" r="6" stroke="currentColor" strokeWidth="1.6" />
@@ -79,13 +81,28 @@ export function AnalyzeInput({ size = "hero", autoFocus, showExample }: Props) {
           autoCapitalize="off"
           spellCheck={false}
           inputMode="text"
-          placeholder={hero ? "Paste an Arc wallet address…" : "Search address or tx hash…"}
+          placeholder={hero ? "Paste a wallet address…" : "Search address or tx hash…"}
           aria-invalid={!!error}
           aria-describedby={`${id}-msg`}
           className={`min-w-0 flex-1 bg-transparent font-mono text-ink placeholder:font-sans placeholder:text-faint focus:outline-none ${
             hero ? "h-12 text-[15px] sm:text-base" : "h-9 text-[13px]"
           }`}
         />
+        {hero && (
+          <label className="flex shrink-0 items-center gap-2 rounded-lg border border-line bg-bg/70 px-2.5 text-xs text-muted">
+            <span className="sr-only">Network</span>
+            <select
+              aria-label="Network"
+              value={network}
+              onChange={(event) => setNetwork(event.target.value as NetworkKey)}
+              className="h-9 max-w-[170px] bg-transparent text-ink outline-none"
+            >
+              {NETWORK_OPTIONS.map((option) => (
+                <option key={option.key} value={option.key} className="bg-surface text-ink">{option.name}</option>
+              ))}
+            </select>
+          </label>
+        )}
         {hint && hero && (
           <span className="hidden shrink-0 rounded-full border border-line px-2.5 py-1 text-[11px] text-muted sm:inline">
             {hint}

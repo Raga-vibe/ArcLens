@@ -3,6 +3,7 @@ import { allowedWindows, serverConfig } from "@/lib/arc/config";
 import { buildWalletReport } from "@/lib/arc/report";
 import { clientIp, rateLimit, releaseSlot, tryAcquireSlot } from "@/lib/rate-limit";
 import { validateWalletRequest } from "@/lib/request";
+import { isNetworkKey } from "@/lib/networks";
 import type { WalletStreamEvent } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +16,9 @@ export const maxDuration = 120;
 export async function GET(req: Request, ctx: RouteContext<"/api/wallet/[address]">) {
   const { address: rawAddress } = await ctx.params;
   const url = new URL(req.url);
-  const v = validateWalletRequest(rawAddress, url.searchParams.get("window"), allowedWindows());
+  const rawNetwork = url.searchParams.get("network");
+  const windows = isNetworkKey(rawNetwork) ? allowedWindows(rawNetwork) : allowedWindows();
+  const v = validateWalletRequest(rawAddress, url.searchParams.get("window"), windows, rawNetwork, url.searchParams.get("asset"));
   if (!v.ok) return errorResponse(v.code);
 
   const rl = rateLimit(`wallet:${clientIp(req)}`, serverConfig.rateLimitPerMinute);
@@ -42,7 +45,7 @@ export async function GET(req: Request, ctx: RouteContext<"/api/wallet/[address]
           stage: (stage) => send({ type: "stage", stage }),
           progress: (p) => send({ type: "progress", ...p }),
           signal: abort.signal,
-        });
+        }, v.value.network, v.value.asset);
         send({ type: "result", data: report });
       } catch (err) {
         if (!abort.signal.aborted) send({ type: "error", error: errorBody(toErrorCode(err)).error });

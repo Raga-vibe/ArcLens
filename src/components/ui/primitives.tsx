@@ -4,6 +4,7 @@ import { animate, useInView, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { explorerAddressUrl } from "@/lib/arc/chain";
+import type { NetworkKey } from "@/lib/networks";
 import { shortAddress } from "@/lib/format";
 import type { AddressKind, AddressLabel, Direction } from "@/lib/types";
 
@@ -86,10 +87,10 @@ export function KindTag({ kind, label }: { kind: AddressKind; label?: AddressLab
 }
 
 /** Address rendered as a link to its ArcLens report. */
-export function AddressLink({ address, full, className }: { address: string; full?: boolean; className?: string }) {
+export function AddressLink({ address, full, className, network }: { address: string; full?: boolean; className?: string; network?: NetworkKey }) {
   return (
     <Link
-      href={`/wallet/${address}`}
+      href={`/wallet/${address}${network ? `?network=${network}` : ""}`}
       className={`font-mono text-[13px] text-ink-2 underline decoration-transparent underline-offset-4 transition-colors hover:text-accent hover:decoration-accent/50 ${className ?? ""}`}
       title={address}
     >

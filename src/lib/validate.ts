@@ -33,7 +33,7 @@ export function classifyInput(raw: string): InputKind {
   const v = raw.trim();
   if (!v) return { kind: "empty" };
   if (v.length > MAX_INPUT_LENGTH)
-    return { kind: "invalid", reason: "That input is too long to be an Arc address or transaction hash." };
+    return { kind: "invalid", reason: "That input is too long to be a wallet address or transaction hash." };
   if (isAddress(v)) return { kind: "address", value: normalizeAddress(v) };
   if (isTxHash(v)) return { kind: "tx", value: v.toLowerCase() as Hex };
   if (/\.(eth|arc)$/i.test(v))
@@ -43,12 +43,12 @@ export function classifyInput(raw: string): InputKind {
     if (!v.startsWith("0x") && (body.length === 40 || body.length === 64))
       return { kind: "invalid", reason: "Add the 0x prefix to analyze this value." };
     if (body.length < 40)
-      return { kind: "invalid", reason: `That looks too short: an Arc address has 40 hex characters after 0x (you entered ${body.length}).` };
+      return { kind: "invalid", reason: `That looks too short: a wallet address has 40 hex characters after 0x (you entered ${body.length}).` };
     if (body.length < 64)
       return { kind: "invalid", reason: "That's between an address and a transaction hash in length. Check that it was copied in full." };
     return { kind: "invalid", reason: "That value is too long for an address or transaction hash." };
   }
-  return { kind: "invalid", reason: "Please enter a valid Arc wallet address (0x…) or transaction hash." };
+  return { kind: "invalid", reason: "Please enter a valid wallet address (0x…) or transaction hash." };
 }
 
 export const WINDOW_KEYS: WindowKey[] = ["24h", "3d", "7d", "30d", "all"];

@@ -30,7 +30,22 @@ describe("API request validation", () => {
 
   it("accepts valid wallet requests and normalises the address", () => {
     const v = validateWalletRequest(ADDR.toUpperCase().replace("0X", "0x"), null, [...allowed]);
-    expect(v).toEqual({ ok: true, value: { address: ADDR, window: "24h" } });
+    expect(v).toEqual({ ok: true, value: { address: ADDR, window: "24h", network: "arc-mainnet", asset: "native" } });
+  });
+
+  it("accepts a supported network and normalises an ERC-20 asset address", () => {
+    const token = "0x9999999999999999999999999999999999999999";
+    expect(validateWalletRequest(ADDR, "3d", [...allowed], "robinhood-testnet", token.toUpperCase().replace("0X", "0x")))
+      .toEqual({ ok: true, value: { address: ADDR, window: "3d", network: "robinhood-testnet", asset: token } });
+  });
+
+  it("rejects unsupported networks and malformed asset addresses", () => {
+    expect(validateWalletRequest(ADDR, "24h", [...allowed], "unsupported"))
+      .toEqual({ ok: false, code: "INVALID_NETWORK" });
+    expect(validateWalletRequest(ADDR, "24h", [...allowed], "robinhood-testnet", "USDC"))
+      .toEqual({ ok: false, code: "INVALID_ASSET" });
+    expect(validateWalletRequest(ADDR, "24h", [...allowed], "arc-mainnet", "0x9999999999999999999999999999999999999999"))
+      .toEqual({ ok: false, code: "INVALID_ASSET" });
   });
 
   it("rejects bad addresses, unknown windows and windows disabled on this deployment", () => {
@@ -60,5 +75,23 @@ describe("decodeMovements", () => {
     expect(moves[0]).toMatchObject({ token: "USDC", value: 5, recognised: true });
     expect(moves[1]).toMatchObject({ token: "EURC", value: 1, decimals: 6 });
     expect(moves[2]).toMatchObject({ token: "Unrecognized token", value: null, recognised: false });
+  });
+
+  it("decodes Robinhood standard ERC-20 Transfer logs without Arc native-USDC assumptions", () => {
+    const token = "0x9999999999999999999999999999999999999999";
+    const moves = decodeMovements([
+      log(A, W, 0, 1, T0, 7, { address: token, data: "0x0f4240" }),
+    ], "robinhood-testnet");
+
+    expect(moves).toHaveLength(1);
+    expect(moves[0]).toMatchObject({
+      token: "ERC-20",
+      tokenAddress: token,
+      assetKey: token,
+      assetKind: "erc20",
+      valueRaw: "1000000",
+      value: null,
+      recognised: false,
+    });
   });
 });

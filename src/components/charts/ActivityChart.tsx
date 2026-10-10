@@ -3,8 +3,9 @@
 import { scaleBand, scaleLinear } from "d3-scale";
 import { motion, useReducedMotion } from "motion/react";
 import { useMemo, useState } from "react";
-import { formatDateTime, formatDay, formatInt, formatUsd } from "@/lib/format";
+import { formatAssetValue, formatDateTime, formatDay, formatInt } from "@/lib/format";
 import type { TimeSeriesPoint } from "@/lib/types";
+import type { NetworkKey, WalletAsset } from "@/lib/networks";
 import { useWidth } from "./useSize";
 
 export type SeriesMode = "count" | "volume";
@@ -20,10 +21,14 @@ export function ActivityChart({
   data,
   mode,
   bucketSeconds,
+  asset,
+  network,
 }: {
   data: TimeSeriesPoint[];
   mode: SeriesMode;
   bucketSeconds: number;
+  asset: WalletAsset;
+  network: NetworkKey;
 }) {
   const [ref, width] = useWidth<HTMLDivElement>();
   const [active, setActive] = useState<number | null>(null);
@@ -41,7 +46,8 @@ export function ActivityChart({
   const max = useMemo(() => Math.max(1e-9, ...data.map((p) => inV(p) + outV(p))), [data, mode]); // eslint-disable-line react-hooks/exhaustive-deps
   const y = useMemo(() => scaleLinear().domain([0, max]).nice(4).range([innerH, 0]), [max, innerH]);
   const ticks = y.ticks(4);
-  const fmtTick = (v: number) => (mode === "count" ? formatInt(v) : formatUsd(v, { compact: true }).replace(".00", ""));
+  const amount = (value: number, compact = false) => formatAssetValue(value, asset, network, { compact });
+  const fmtTick = (v: number) => (mode === "count" ? formatInt(v) : amount(v, true));
 
   // ~6 x labels, aligned to bucket boundaries
   const labelEvery = Math.max(1, Math.ceil(data.length / Math.max(3, Math.floor(innerW / 110))));
@@ -64,7 +70,7 @@ export function ActivityChart({
     setActive(i);
   }
 
-  const label = `Stacked bar chart of ${mode === "count" ? "USDC transfer count" : "USDC volume"} per ${bucketSeconds >= 86_400 ? "day" : bucketSeconds >= 3600 * 2 ? `${bucketSeconds / 3600} hours` : "hour"}, split into incoming and outgoing. Use arrow keys to inspect values.`;
+  const label = `Stacked bar chart of ${mode === "count" ? `${asset.symbol} transfer count` : `${asset.symbol} volume`} per ${bucketSeconds >= 86_400 ? "day" : bucketSeconds >= 3600 * 2 ? `${bucketSeconds / 3600} hours` : "hour"}, split into incoming and outgoing. Use arrow keys to inspect values.`;
 
   return (
     <div ref={ref} className="relative w-full">
@@ -148,11 +154,11 @@ export function ActivityChart({
           role="status"
         >
           <p className="mb-2 font-mono text-[10.5px] text-muted">{formatDateTime(p.t)}</p>
-          <Row color="var(--series-in)" label="Incoming" value={mode === "count" ? formatInt(p.inCount) : formatUsd(p.inVolume)} />
-          <Row color="var(--series-out)" label="Outgoing" value={mode === "count" ? formatInt(p.outCount) : formatUsd(p.outVolume)} />
+          <Row color="var(--series-in)" label="Incoming" value={mode === "count" ? formatInt(p.inCount) : amount(p.inVolume)} />
+          <Row color="var(--series-out)" label="Outgoing" value={mode === "count" ? formatInt(p.outCount) : amount(p.outVolume)} />
           <div className="mt-2 flex justify-between border-t border-line pt-2 text-ink">
             <span>Total</span>
-            <span className="tabular">{mode === "count" ? `${formatInt(p.count)} transfers` : formatUsd(p.volume)}</span>
+            <span className="tabular">{mode === "count" ? `${formatInt(p.count)} transfers` : amount(p.volume)}</span>
           </div>
         </div>
       )}

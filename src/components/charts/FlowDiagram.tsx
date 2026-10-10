@@ -3,8 +3,9 @@
 import { motion, useReducedMotion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { formatInt, formatPct, formatUsd, shortAddress } from "@/lib/format";
+import { formatAssetValue, formatInt, formatPct, shortAddress } from "@/lib/format";
 import type { Counterparty } from "@/lib/types";
+import type { NetworkKey, WalletAsset } from "@/lib/networks";
 import { useWidth } from "./useSize";
 
 interface Side {
@@ -38,7 +39,7 @@ function side(cps: Counterparty[], dir: "in" | "out", total: number, totalCount:
 }
 
 /**
- * Value flow: top senders → wallet → top recipients. Ribbon width ∝ USDC volume.
+ * Value flow: top senders → wallet → top recipients. Ribbon width ∝ selected-asset volume.
  * `inTotal`/`outTotal` come from full-window stats so "All others" is exact even
  * though only the top counterparties are sent to the client.
  */
@@ -48,17 +49,22 @@ export function FlowDiagram({
   outTotal,
   inCount,
   outCount,
+  asset,
+  network,
 }: {
   counterparties: Counterparty[];
   inTotal: number;
   outTotal: number;
   inCount: number;
   outCount: number;
+  asset: WalletAsset;
+  network: NetworkKey;
 }) {
   const [ref, width] = useWidth<HTMLDivElement>();
   const [hover, setHover] = useState<string | null>(null);
   const reduce = useReducedMotion();
   const router = useRouter();
+  const amount = (value: number, compact = false) => formatAssetValue(value, asset, network, { compact });
   const left = useMemo(() => side(counterparties, "in", inTotal, inCount), [counterparties, inTotal, inCount]);
   const right = useMemo(() => side(counterparties, "out", outTotal, outCount), [counterparties, outTotal, outCount]);
 
@@ -66,7 +72,7 @@ export function FlowDiagram({
   if (narrow)
     return (
       <div ref={ref}>
-        <FlowList left={left} right={right} inTotal={inTotal} outTotal={outTotal} />
+        <FlowList left={left} right={right} inTotal={inTotal} outTotal={outTotal} amount={amount} network={network} />
       </div>
     );
 
@@ -110,11 +116,11 @@ export function FlowDiagram({
     return `M${x0},${y0}C${mx},${y0} ${mx},${y1} ${x1},${y1}V${y1 + h1}C${mx},${y1 + h1} ${mx},${y0 + h0} ${x0},${y0 + h0}Z`;
   };
 
-  const go = (a: string | null) => a && router.push(`/wallet/${a}`);
+  const go = (a: string | null) => a && router.push(`/wallet/${a}?network=${network}`);
 
   return (
     <div ref={ref} className="relative">
-      <svg width={width} height={H} role="img" aria-label="Flow of USDC from top senders into the wallet and out to top recipients. Ribbon width is proportional to volume.">
+      <svg width={width} height={H} role="img" aria-label={`Flow of ${asset.symbol} from top senders into the wallet and out to top recipients. Ribbon width is proportional to volume.`}>
         <text x={xL} y={16} textAnchor="end" className="fill-[var(--muted)] font-mono text-[10px] tracking-widest">SENDERS ↓ IN</text>
         <text x={xR} y={16} className="fill-[var(--muted)] font-mono text-[10px] tracking-widest">OUT ↑ RECIPIENTS</text>
 
@@ -156,7 +162,7 @@ export function FlowDiagram({
               onKeyDown={(e) => e.key === "Enter" && go(n.address)}
               tabIndex={n.address ? 0 : -1}
               role={n.address ? "link" : undefined}
-              aria-label={`${isL ? "From" : "To"} ${n.address ?? "all other counterparties"}: ${formatUsd(n.volume)}, ${formatInt(n.count)} transfers`}
+              aria-label={`${isL ? "From" : "To"} ${n.address ?? "all other counterparties"}: ${amount(n.volume)}, ${formatInt(n.count)} transfers`}
               className={n.address ? "cursor-pointer outline-none" : undefined}
             >
               <rect x={isL ? xL : xR - nodeW} y={n.y} width={nodeW} height={n.h} rx={2} fill={isL ? "var(--series-in)" : "var(--series-out)"} />
@@ -170,7 +176,7 @@ export function FlowDiagram({
                 {n.label}
               </text>
               <text x={isL ? xL - 10 : xR + 10} y={n.y + n.h / 2 + 11} textAnchor={isL ? "end" : "start"} className="fill-[var(--faint)] text-[10px] tabular">
-                {formatUsd(n.volume, { compact: true })} · {formatPct(total ? n.volume / total : 0)}
+                {amount(n.volume, true)} · {formatPct(total ? n.volume / total : 0)}
               </text>
             </g>
           );
@@ -180,7 +186,7 @@ export function FlowDiagram({
   );
 }
 
-function FlowCol({ items, total, dir }: { items: Side[]; total: number; dir: "in" | "out" }) {
+function FlowCol({ items, total, dir, amount, network }: { items: Side[]; total: number; dir: "in" | "out"; amount: (value: number, compact?: boolean) => string; network: NetworkKey }) {
   return (
     <div>
       <p className="eyebrow mb-3">{dir === "in" ? "Came from ↓" : "Went to ↑"}</p>
@@ -192,13 +198,13 @@ function FlowCol({ items, total, dir }: { items: Side[]; total: number; dir: "in
             <li key={n.key}>
               <div className="flex justify-between gap-3 text-xs">
                 {n.address ? (
-                  <a href={`/wallet/${n.address}`} className="font-mono text-ink-2 hover:text-accent">
+                  <a href={`/wallet/${n.address}?network=${network}`} className="font-mono text-ink-2 hover:text-accent">
                     {n.label}
                   </a>
                 ) : (
                   <span className="text-muted">{n.label}</span>
                 )}
-                <span className="tabular text-muted">{formatUsd(n.volume, { compact: true })}</span>
+                <span className="tabular text-muted">{amount(n.volume, true)}</span>
               </div>
               <div className="mt-1 h-1.5 rounded-full bg-elevated-2">
                 <div className={`h-1.5 rounded-full ${dir === "in" ? "bg-in" : "bg-out"}`} style={{ width: `${Math.max(2, (n.volume / Math.max(total, 1e-9)) * 100)}%` }} />
@@ -211,11 +217,11 @@ function FlowCol({ items, total, dir }: { items: Side[]; total: number; dir: "in
   );
 }
 
-function FlowList({ left, right, inTotal, outTotal }: { left: Side[]; right: Side[]; inTotal: number; outTotal: number }) {
+function FlowList({ left, right, inTotal, outTotal, amount, network }: { left: Side[]; right: Side[]; inTotal: number; outTotal: number; amount: (value: number, compact?: boolean) => string; network: NetworkKey }) {
   return (
     <div className="grid gap-8 sm:grid-cols-2">
-      <FlowCol items={left} total={inTotal} dir="in" />
-      <FlowCol items={right} total={outTotal} dir="out" />
+      <FlowCol items={left} total={inTotal} dir="in" amount={amount} network={network} />
+      <FlowCol items={right} total={outTotal} dir="out" amount={amount} network={network} />
     </div>
   );
 }

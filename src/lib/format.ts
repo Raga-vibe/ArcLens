@@ -1,4 +1,5 @@
 // Formatting helpers shared by server-generated text and the UI.
+import type { NetworkKey, WalletAsset } from "@/lib/networks";
 
 export function shortAddress(a: string, head = 6, tail = 4) {
   if (!a) return "";
@@ -25,6 +26,24 @@ export function formatUsd(v: number, opts: { compact?: boolean; precise?: boolea
 /** Full-precision USDC amount, e.g. "1,234.567891 USDC". */
 export function formatUsdc(v: number) {
   return `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 6 }).format(v)} USDC`;
+}
+
+export function formatAssetValue(
+  value: number,
+  asset: WalletAsset,
+  network: NetworkKey,
+  opts: { compact?: boolean; precise?: boolean } = {},
+) {
+  if (network === "arc-mainnet") return formatUsd(value, opts);
+  if (!Number.isFinite(value)) return "—";
+  const abs = Math.abs(value);
+  if (opts.compact && abs >= 10_000) {
+    return `${new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(value)} ${asset.symbol}`;
+  }
+  const digits = opts.precise ? Math.min(8, Math.max(2, asset.decimals)) : Math.min(6, Math.max(2, asset.decimals));
+  const formatted = new Intl.NumberFormat("en-US", { maximumFractionDigits: digits }).format(abs);
+  if (abs > 0 && abs < 10 ** -digits) return `${value < 0 ? "−" : "<"}${10 ** -digits} ${asset.symbol}`;
+  return `${value < 0 ? "−" : ""}${formatted} ${asset.symbol}`;
 }
 
 export function formatInt(v: number) {

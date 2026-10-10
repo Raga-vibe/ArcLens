@@ -3,9 +3,10 @@
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { formatInt } from "@/lib/format";
 import type { AnalysisStage } from "@/lib/types";
+import type { NetworkKey } from "@/lib/networks";
 
 const STAGES: { key: AnalysisStage; label: string }[] = [
-  { key: "connect", label: "Connecting to Arc" },
+  { key: "connect", label: "Connecting to network" },
   { key: "fetch", label: "Fetching activity" },
   { key: "normalize", label: "Normalizing transactions" },
   { key: "stats", label: "Calculating statistics" },
@@ -15,9 +16,11 @@ const STAGES: { key: AnalysisStage; label: string }[] = [
 export function AnalysisLoader({
   stage,
   progress,
+  network,
 }: {
   stage: AnalysisStage;
   progress: { done: number; total: number; found: number } | null;
+  network: NetworkKey;
 }) {
   const reduce = useReducedMotion();
   const idx = STAGES.findIndex((s) => s.key === stage);
@@ -27,7 +30,7 @@ export function AnalysisLoader({
   return (
     <div className="mx-auto grid max-w-5xl gap-10 py-10 md:grid-cols-[1fr_1.1fr] md:items-center md:py-16" role="status" aria-live="polite">
       <div>
-        <p className="eyebrow mb-4">Analyzing on Arc mainnet</p>
+        <p className="eyebrow mb-4">Analyzing on {network === "arc-mainnet" ? "Arc Mainnet" : "Robinhood Chain Testnet"}</p>
         <ol className="space-y-3">
           {STAGES.map((s, i) => {
             const state = i < idx ? "done" : i === idx ? "active" : "todo";
@@ -51,7 +54,7 @@ export function AnalysisLoader({
                 </span>
                 {s.key === "fetch" && progress && state !== "todo" && (
                   <span className="ml-auto font-mono text-[11px] text-muted tabular">
-                    {formatInt(progress.done)}/{formatInt(progress.total)} ranges · {formatInt(progress.found)} logs
+                    {formatInt(progress.done)}/{formatInt(progress.total)} {network === "arc-mainnet" ? "ranges ·" : "sources ·"} {formatInt(progress.found)} {network === "arc-mainnet" ? "logs" : "records"}
                   </span>
                 )}
               </li>
@@ -59,7 +62,7 @@ export function AnalysisLoader({
           })}
         </ol>
         <p className="mt-6 max-w-sm text-sm text-muted">
-          ArcLens scans Arc block ranges directly from the chain. Busy addresses can take up to a minute on the public RPC.
+          ArcLens reads chain data from the selected network. Busy addresses can take longer when public RPC or explorer services are under load.
         </p>
       </div>
 

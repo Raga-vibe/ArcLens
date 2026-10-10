@@ -1,15 +1,17 @@
 import { keccak256, stringToBytes, type Hex } from "viem";
 import type { Counterparty, ScanWindow, Transaction } from "@/lib/types";
+import type { WalletAsset } from "@/lib/networks";
 
 // A report snapshot is the canonical, reproducible core of a wallet report.
-// Its keccak256 hash is what gets anchored on Arc. Amounts are exact raw
-// 18-decimal integers (strings), so the hash never depends on float rounding.
+// Its keccak256 hash is what gets anchored on Arc. Amounts are exact raw token
+// integers (strings), so the hash never depends on float rounding.
 
-export const SNAPSHOT_SCHEMA = "arclens.report.v1";
+export const SNAPSHOT_SCHEMA = "arclens.report.v2";
 
 export interface ReportSnapshot {
   schema: typeof SNAPSHOT_SCHEMA;
   chainId: number;
+  asset: WalletAsset;
   subject: string;
   fromBlock: number;
   toBlock: number;
@@ -19,6 +21,7 @@ export interface ReportSnapshot {
   txCount: number;
   inCount: number;
   outCount: number;
+  /** Selected asset's smallest-unit integer, represented losslessly. */
   inVolumeRaw: string;
   outVolumeRaw: string;
   uniqueCounterparties: number;
@@ -33,6 +36,7 @@ export function buildSnapshot(
   txs: Transaction[],
   counterparties: Counterparty[],
   topN = 5,
+  asset: WalletAsset = { key: "native", symbol: "USDC", decimals: 18, address: null, kind: "native" },
 ): ReportSnapshot {
   let inRaw = BigInt(0);
   let outRaw = BigInt(0);
@@ -55,6 +59,7 @@ export function buildSnapshot(
   return {
     schema: SNAPSHOT_SCHEMA,
     chainId,
+    asset,
     subject: subject.toLowerCase(),
     fromBlock: window.fromBlock,
     toBlock: window.toBlock,
@@ -79,6 +84,7 @@ export function canonicalSnapshotJson(s: ReportSnapshot): string {
   return JSON.stringify({
     schema: s.schema,
     chainId: s.chainId,
+    asset: s.asset,
     subject: s.subject,
     fromBlock: s.fromBlock,
     toBlock: s.toBlock,

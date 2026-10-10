@@ -44,7 +44,7 @@ function Hero() {
             See what’s happening <em className="text-accent">on Arc.</em>
           </h1>
           <p className="mt-6 max-w-lg text-lg leading-relaxed text-ink-2 sm:text-xl">
-            Turn raw Arc activity into clear, visual intelligence.
+            Turn raw Arc and Robinhood Chain Testnet activity into clear, visual intelligence. Choose a network in the search box.
           </p>
           <div className="mt-10 max-w-xl">
             <AnalyzeInput size="hero" showExample />
@@ -274,9 +274,9 @@ function Showcase() {
 }
 
 const STEPS = [
-  ["Enter an Arc wallet", "Paste any 0x address, or a transaction hash."],
-  ["ArcLens retrieves on-chain activity", "Directly from Arc mainnet over JSON-RPC, block range by block range."],
-  ["The data is normalized and analyzed", "Native USDC Transfer logs are decoded, de-duplicated and aggregated."],
+  ["Choose a network and enter an address", "Paste any 0x address or transaction hash on Arc Mainnet or Robinhood Chain Testnet."],
+  ["ArcLens retrieves on-chain activity", "The network adapter reads RPC data and indexed history for the selected chain."],
+  ["The data is normalized and analyzed", "Native movements and standard ERC-20 Transfer logs are decoded and aggregated by asset."],
   ["ArcLens visualizes the result", "Charts, flow, heatmap, rankings, and a summary computed from the data."],
   ["You explore the wallet", "Filter, sort, expand, jump to counterparties, share the URL."],
 ];

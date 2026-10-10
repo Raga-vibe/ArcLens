@@ -13,6 +13,7 @@ describe("report snapshot", () => {
 
   it("uses exact raw integer totals", () => {
     expect(snap.subject).toBe(W);
+    expect(snap.asset).toEqual({ key: "native", symbol: "USDC", decimals: 18, address: null, kind: "native" });
     expect(snap.inVolumeRaw).toBe((BigInt(350) * BigInt(10) ** BigInt(18)).toString());
     expect(snap.outVolumeRaw).toBe((BigInt(45) * BigInt(10) ** BigInt(18)).toString());
     expect(snap.transferCount).toBe(6);
@@ -35,5 +36,13 @@ describe("report snapshot", () => {
     expect(hashSnapshot(other)).not.toBe(hashSnapshot(snap));
     const fewer = buildSnapshot(5042, W, window, txs.slice(1), calculateCounterpartyStats(txs.slice(1)));
     expect(hashSnapshot(fewer)).not.toBe(hashSnapshot(snap));
+    const otherAsset = buildSnapshot(46630, W, window, txs, cps, 5, {
+      key: "0x9999999999999999999999999999999999999999",
+      symbol: "TEST",
+      decimals: 6,
+      address: "0x9999999999999999999999999999999999999999",
+      kind: "erc20",
+    });
+    expect(hashSnapshot(otherAsset)).not.toBe(hashSnapshot(snap));
   });
 });

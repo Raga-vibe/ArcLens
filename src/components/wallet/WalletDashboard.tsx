@@ -7,18 +7,19 @@ import { FlowDiagram } from "@/components/charts/FlowDiagram";
 import { Heatmap } from "@/components/charts/Heatmap";
 import { CopyButton, CountUp, EmptyState, ExternalLink, KindTag, Panel, Segmented } from "@/components/ui/primitives";
 import { track } from "@/lib/analytics-events";
-import { explorerAddressUrl } from "@/lib/arc/chain";
+import { explorerAddressUrl } from "@/lib/networks";
 import {
   formatDateTime,
   formatDuration,
+  formatAssetValue,
   formatInt,
   formatPct,
   formatRelative,
   formatSignedPct,
-  formatUsd,
   shortAddress,
 } from "@/lib/format";
 import type { WalletInsight, WalletReport, WindowKey } from "@/lib/types";
+import { NETWORK_OPTIONS, type NetworkKey } from "@/lib/networks";
 import { AnchorPanel } from "./AnchorPanel";
 import { CounterpartyTable } from "./CounterpartyTable";
 import { TransactionExplorer } from "./TransactionExplorer";
@@ -30,12 +31,20 @@ export function WalletHeader({
   window,
   windows,
   onWindow,
+  network,
+  onNetwork,
+  assetKey,
+  onAsset,
   report,
 }: {
   address: string;
   window: WindowKey;
   windows: WindowKey[];
   onWindow: (w: WindowKey) => void;
+  network: NetworkKey;
+  onNetwork: (network: NetworkKey) => void;
+  assetKey: string;
+  onAsset: (asset: string) => void;
   report: WalletReport | null;
 }) {
   const [shared, setShared] = useState(false);
@@ -59,7 +68,9 @@ export function WalletHeader({
             type="button"
             onClick={async () => {
               try {
-                await navigator.clipboard.writeText(`${location.origin}/wallet/${address}?window=${window}`);
+                const params = new URLSearchParams({ window, network });
+                if (assetKey !== "native") params.set("asset", assetKey);
+                await navigator.clipboard.writeText(`${location.origin}/wallet/${address}?${params}`);
                 setShared(true);
                 track("share_report", { kind: "wallet" });
                 setTimeout(() => setShared(false), 1400);
@@ -70,16 +81,42 @@ export function WalletHeader({
             {shared ? "Link copied" : "Share report"}
           </button>
           <a
-            href={explorerAddressUrl(address)}
+            href={explorerAddressUrl(address, network)}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 rounded-md border border-line px-2 py-1 text-xs text-muted transition-colors hover:border-line-strong hover:text-ink"
           >
-            Arc Explorer ↗<span className="sr-only">(opens in a new tab)</span>
+            {report?.networkName ?? "Explorer"} ↗<span className="sr-only">(opens in a new tab)</span>
           </a>
         </div>
       </div>
       <div className="flex flex-col items-start gap-2 lg:items-end">
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="sr-only" htmlFor="wallet-network">Network</label>
+          <select
+            id="wallet-network"
+            value={network}
+            onChange={(event) => onNetwork(event.target.value as NetworkKey)}
+            className="h-9 rounded-md border border-line bg-surface px-2.5 text-xs text-ink outline-none"
+          >
+            {NETWORK_OPTIONS.map((option) => <option key={option.key} value={option.key}>{option.name}</option>)}
+          </select>
+          {report && report.availableAssets.length > 1 && (
+            <>
+              <label className="sr-only" htmlFor="wallet-asset">Asset</label>
+              <select
+                id="wallet-asset"
+                value={assetKey}
+                onChange={(event) => onAsset(event.target.value)}
+                className="h-9 max-w-[220px] rounded-md border border-line bg-surface px-2.5 text-xs text-ink outline-none"
+              >
+                {report.availableAssets.map((asset) => (
+                  <option key={asset.key} value={asset.key}>{asset.symbol}{asset.kind === "erc20" && asset.address ? ` · ${shortAddress(asset.address)}` : " · native"}</option>
+                ))}
+              </select>
+            </>
+          )}
+        </div>
         <Segmented
           label="Analysis window"
           value={window}
@@ -119,7 +156,9 @@ export function WalletDashboard({ report }: { report: WalletReport }) {
   const [mode, setMode] = useState<SeriesMode>("count");
   const { stats: s, wallet, window: w, comparison: cmp } = report;
   const now = report.generatedAt;
-  const money = (v: number) => formatUsd(v, { compact: v >= 1e6 });
+  const money = (v: number) => formatAssetValue(v, report.asset, report.network, { compact: v >= 1e6 });
+  const nativeAsset = { key: "native", symbol: wallet.balanceSymbol ?? report.asset.symbol, decimals: 18, address: null, kind: "native" as const };
+  const balance = (v: number) => formatAssetValue(v, nativeAsset, report.network);
 
   const statItems: { label: string; node: ReactNode; sub?: ReactNode; show: boolean }[] = [
     {
@@ -128,15 +167,15 @@ export function WalletDashboard({ report }: { report: WalletReport }) {
       sub: `${formatInt(s.txCount)} transactions`,
       show: true,
     },
-    { label: "USDC volume", node: <CountUp value={s.totalVolume} format={money} />, sub: `${formatInt(s.uniqueCounterparties)} counterparties`, show: true },
+    { label: `${report.asset.symbol} volume`, node: <CountUp value={s.totalVolume} format={money} />, sub: `${formatInt(s.uniqueCounterparties)} counterparties`, show: true },
     { label: "Incoming ↓", node: <CountUp value={s.inVolume} format={money} />, sub: `${formatInt(s.inCount)} transfers`, show: true },
     { label: "Outgoing ↑", node: <CountUp value={s.outVolume} format={money} />, sub: `${formatInt(s.outCount)} transfers`, show: true },
     { label: "Unique counterparties", node: <CountUp value={s.uniqueCounterparties} format={formatInt} />, sub: s.hhi !== null ? `HHI ${s.hhi.toFixed(2)}` : undefined, show: true },
-    { label: "Average transfer", node: s.average !== null ? formatUsd(s.average) : "—", sub: s.largest ? `Largest ${formatUsd(s.largest.value, { compact: true })}` : undefined, show: s.average !== null },
-    { label: "Median transfer", node: s.median !== null ? formatUsd(s.median) : "—", show: s.median !== null },
+    { label: "Average transfer", node: s.average !== null ? money(s.average) : "—", sub: s.largest ? `Largest ${money(s.largest.value)}` : undefined, show: s.average !== null },
+    { label: "Median transfer", node: s.median !== null ? money(s.median) : "—", show: s.median !== null },
     { label: "First activity", node: <span className="text-[17px] sm:text-lg">{s.firstActivity ? formatDateTime(s.firstActivity) : "—"}</span>, sub: "in window", show: s.firstActivity !== null },
     { label: "Latest activity", node: <span className="text-[17px] sm:text-lg">{s.latestActivity ? formatRelative(s.latestActivity, now) : "—"}</span>, sub: s.latestActivity ? formatDateTime(s.latestActivity) : undefined, show: s.latestActivity !== null },
-    { label: "Current balance", node: <CountUp value={wallet.balance} format={money} />, sub: "USDC, live", show: true },
+    { label: "Current balance", node: <CountUp value={wallet.balance} format={balance} />, sub: `${wallet.balanceSymbol ?? report.asset.symbol}, live`, show: true },
     { label: "Transactions sent", node: <CountUp value={wallet.nonce} format={formatInt} />, sub: "all-time (account nonce)", show: true },
     { label: "Active hours", node: <CountUp value={s.activeHours} format={formatInt} />, sub: `${formatInt(s.activeDays)} active UTC days`, show: true },
   ];
@@ -160,11 +199,11 @@ export function WalletDashboard({ report }: { report: WalletReport }) {
       {empty ? (
         <Panel title="Activity" eyebrow="Time series">
           <EmptyState
-            title="No USDC transfers in this window"
+            title={`No ${report.asset.symbol} transfers in this window`}
             body={
               <>
-                ArcLens scanned blocks {formatInt(w.fromBlock)}–{formatInt(w.toBlock)} ({formatDuration(w.toTimestamp - w.fromTimestamp)}) and found no USDC
-                transfers to or from this address. Try a longer window if available.
+                ArcLens scanned blocks {formatInt(w.fromBlock)}–{formatInt(w.toBlock)} ({formatDuration(w.toTimestamp - w.fromTimestamp)}) and found no {report.asset.symbol}
+                movements to or from this address. Try a longer window if available.
               </>
             }
           />
@@ -192,12 +231,12 @@ export function WalletDashboard({ report }: { report: WalletReport }) {
             }
           >
             <div className="p-3 sm:p-5">
-              <ActivityChart data={report.timeSeries} mode={mode} bucketSeconds={report.bucketSeconds} />
+              <ActivityChart data={report.timeSeries} mode={mode} bucketSeconds={report.bucketSeconds} asset={report.asset} network={report.network} />
             </div>
           </Panel>
 
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.35fr_1fr]">
-            <Panel id="flow" title="Value flow" eyebrow="Counterparty flow" description="Top senders → this wallet → top recipients. Width is proportional to USDC volume.">
+            <Panel id="flow" title="Value flow" eyebrow="Counterparty flow" description={`Top senders → this wallet → top recipients. Width is proportional to ${report.asset.symbol} volume.`}>
               <div className="p-4 sm:p-5">
                 <FlowDiagram
                   counterparties={report.counterparties}
@@ -205,6 +244,8 @@ export function WalletDashboard({ report }: { report: WalletReport }) {
                   outTotal={s.outVolume}
                   inCount={s.inCount}
                   outCount={s.outCount}
+                  asset={report.asset}
+                  network={report.network}
                 />
               </div>
             </Panel>
@@ -216,18 +257,18 @@ export function WalletDashboard({ report }: { report: WalletReport }) {
           </div>
 
           <Panel id="counterparties" title="Counterparties" eyebrow="Ranked">
-            <CounterpartyTable data={report.counterparties} total={report.counterpartiesTotal} />
+            <CounterpartyTable data={report.counterparties} total={report.counterpartiesTotal} asset={report.asset} network={report.network} />
           </Panel>
 
           <Panel id="transactions" title="Transactions" eyebrow="Explorer">
-            <TransactionExplorer data={report.transactions} total={report.transactionsTotal} analyzedAt={report.generatedAt} />
+            <TransactionExplorer data={report.transactions} total={report.transactionsTotal} analyzedAt={report.generatedAt} asset={report.asset} network={report.network} />
           </Panel>
         </>
       )}
 
       <p className="pb-4 text-xs leading-relaxed text-faint">
-        Source: {report.source.description}. Amounts are native USDC (18-decimal) values from on-chain logs. Contract/Account tags come from
-        on-chain bytecode checks. Named labels only come from Arc&apos;s official contract list. ArcLens doesn&apos;t attribute addresses to people or
+        Source: {report.source.description}. Metrics are reported in {report.asset.symbol} units, without combining different assets. Contract/Account tags come from
+        on-chain bytecode checks. ArcLens doesn&apos;t attribute addresses to people or
         organizations. Informational only; not financial advice.
       </p>
     </div>
@@ -249,7 +290,7 @@ function SummaryPanel({ report }: { report: WalletReport }) {
   if (s.top3OutShare !== null) extras.push({ k: "Top-3 recipient share", v: formatPct(s.top3OutShare) });
   if (s.top3InShare !== null) extras.push({ k: "Top-3 sender share", v: formatPct(s.top3InShare) });
   if (s.hourlyVolatility !== null) extras.push({ k: "Hourly volatility (CV)", v: s.hourlyVolatility.toFixed(2) });
-  if (s.transferCount) extras.push({ k: "Net flow", v: `${s.netFlow >= 0 ? "+" : ""}${formatUsd(s.netFlow)}` });
+  if (s.transferCount) extras.push({ k: "Net flow", v: `${s.netFlow >= 0 ? "+" : ""}${formatAssetValue(s.netFlow, report.asset, report.network)}` });
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.3fr_1fr]">
@@ -318,5 +359,5 @@ function SummaryPanel({ report }: { report: WalletReport }) {
 }
 
 export function ExternalExplorer({ address }: { address: string }) {
-  return <ExternalLink href={explorerAddressUrl(address)}>Arc Explorer</ExternalLink>;
+  return <ExternalLink href={explorerAddressUrl(address)}>Explorer</ExternalLink>;
 }

@@ -1,4 +1,5 @@
 import type { ReportSnapshot } from "@/lib/analytics/snapshot";
+import type { NetworkKey, WalletAsset } from "@/lib/networks";
 
 // Shared domain types. Everything here is serialisable (no bigint) so it can
 // cross the server → client boundary as JSON.
@@ -8,9 +9,9 @@ export type Address = Hex;
 
 export type Direction = "in" | "out";
 
-/** A single USDC movement reconstructed from an EIP-7708 native Transfer log. */
+/** A single asset movement supplied by a chain-specific data provider. */
 export interface TokenTransfer {
-  /** `${txHash}:${logIndex}` — unique per movement. */
+  /** Unique within a report, including native internal movements. */
   id: string;
   txHash: Hex;
   logIndex: number;
@@ -19,11 +20,16 @@ export interface TokenTransfer {
   timestamp: number;
   from: Address;
   to: Address;
-  /** Raw 18-decimal native amount as a decimal string (lossless). */
+  /** Raw token amount as a decimal string (lossless). */
   valueRaw: string;
-  /** Amount in USDC as a float (6-decimal precision), for analytics. */
+  /** Amount in this asset's units as a float (up to 6 decimal places). */
   value: number;
-  token: "USDC";
+  /** `native` on the chain currency; ERC-20s use their lower-case address. */
+  assetKey?: string;
+  token: string;
+  tokenAddress?: Address | null;
+  decimals?: number;
+  assetKind?: "native" | "erc20";
 }
 
 /** A transfer seen from the analysed wallet's perspective. */
@@ -70,9 +76,10 @@ export interface Wallet {
   address: Address;
   isContract: boolean;
   label?: AddressLabel;
-  /** Current native USDC balance (full precision via eth_getBalance). */
+  /** Current native balance (full precision via eth_getBalance). */
   balance: number;
   balanceRaw: string;
+  balanceSymbol?: string;
   /** eth_getTransactionCount — transactions ever sent by this address (all-time). */
   nonce: number;
 }
@@ -149,6 +156,11 @@ export interface WalletInsight {
 }
 
 export interface WalletReport {
+  network: NetworkKey;
+  networkName: string;
+  /** Report statistics and flows are scoped to this one asset. */
+  asset: WalletAsset;
+  availableAssets: WalletAsset[];
   wallet: Wallet;
   window: ScanWindow;
   latestBlock: number;
@@ -173,7 +185,7 @@ export interface WalletReport {
 }
 
 export interface DataSourceInfo {
-  kind: "rpc-logs";
+  kind: "rpc-logs" | "indexed-transfers";
   description: string;
   maxWindow: WindowKey;
 }
@@ -190,9 +202,17 @@ export interface TxTokenMovement {
   value: number | null;
   logIndex: number;
   recognised: boolean;
+  assetKey?: string;
+  assetKind?: "native" | "erc20";
 }
 
 export interface TransactionInsight {
+  network: NetworkKey;
+  networkName: string;
+  chainId: number;
+  explorer: string;
+  nativeCurrencySymbol: string;
+  feeCurrencySymbol: string;
   hash: Hex;
   status: "success" | "reverted";
   blockNumber: number;
@@ -204,7 +224,7 @@ export interface TransactionInsight {
   toLabel?: AddressLabel;
   toIsContract: boolean;
   contractCreated: Address | null;
-  /** Native value attached to the tx, in USDC. */
+  /** Native value attached to the transaction, in the chain's native currency. */
   value: number;
   valueRaw: string;
   fee: number;
@@ -214,7 +234,7 @@ export interface TransactionInsight {
   methodSelector: Hex | null;
   type: number;
   movements: TxTokenMovement[];
-  /** USDC moved (native EIP-7708 stream), summed. */
+  /** Arc native USDC moved (EIP-7708 stream), summed. Zero on other networks. */
   usdcMoved: number;
   logCount: number;
   explanation: string[];
@@ -226,6 +246,8 @@ export type ErrorCode =
   | "INVALID_ADDRESS"
   | "INVALID_HASH"
   | "INVALID_WINDOW"
+  | "INVALID_NETWORK"
+  | "INVALID_ASSET"
   | "NOT_FOUND"
   | "RATE_LIMITED"
   | "UPSTREAM_UNAVAILABLE"

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { track } from "@/lib/analytics-events";
 import type { AnalysisStage, ErrorResponse, WalletReport, WalletStreamEvent, WindowKey } from "@/lib/types";
+import type { NetworkKey } from "@/lib/networks";
 
 export interface WalletState {
   status: "loading" | "ready" | "error";
@@ -15,24 +16,25 @@ export interface WalletState {
 const initial: WalletState = { status: "loading", stage: "connect", progress: null, report: null, error: null };
 
 /** Consumes the NDJSON analysis stream from /api/wallet/[address]. */
-export function useWalletReport(address: string, window: WindowKey, nonce = 0): WalletState {
+export function useWalletReport(address: string, window: WindowKey, network: NetworkKey, asset: string, nonce = 0): WalletState {
   // State is keyed by request, so a new address/window renders as loading
   // without a synchronous reset inside the effect.
-  const key = `${address}|${window}|${nonce}`;
+  const key = `${address}|${window}|${network}|${asset}|${nonce}`;
   const [keyed, setKeyed] = useState<WalletState & { key: string }>({ ...initial, key });
 
   useEffect(() => {
     const ctrl = new AbortController();
     const setState = (fn: (s: WalletState) => WalletState) =>
       setKeyed((prev) => ({ ...fn(prev.key === key ? prev : initial), key }));
-    track("wallet_analysis_started", { window });
+    track("wallet_analysis_started", { window, network });
     const started = performance.now();
 
     (async () => {
       try {
-        const res = await fetch(`/api/wallet/${address}?window=${window}`, { signal: ctrl.signal });
+        const params = new URLSearchParams({ window, network, asset });
+        const res = await fetch(`/api/wallet/${address}?${params}`, { signal: ctrl.signal });
         if (!res.ok || !res.body) {
-          let err: ErrorResponse["error"] = { code: "UPSTREAM_UNAVAILABLE", message: "Arc data is temporarily unavailable. Please try again shortly." };
+          let err: ErrorResponse["error"] = { code: "UPSTREAM_UNAVAILABLE", message: "Chain data is temporarily unavailable. Please try again shortly." };
           try {
             const j = (await res.json()) as ErrorResponse;
             if (j?.error) err = j.error;
@@ -58,6 +60,7 @@ export function useWalletReport(address: string, window: WindowKey, nonce = 0): 
             else if (ev.type === "result") {
               track("wallet_analysis_completed", {
                 window,
+                network,
                 transfers: ev.data.stats.transferCount > 0 ? "some" : "none",
                 ms: Math.round(performance.now() - started),
               });
@@ -81,7 +84,7 @@ export function useWalletReport(address: string, window: WindowKey, nonce = 0): 
     })();
 
     return () => ctrl.abort();
-  }, [address, window, nonce, key]);
+  }, [address, window, network, asset, nonce, key]);
 
   return keyed.key === key ? keyed : initial;
 }

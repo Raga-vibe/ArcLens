@@ -3,14 +3,16 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { AddressLink, DirectionBadge, EmptyState, KindTag, Segmented } from "@/components/ui/primitives";
-import { formatDateTime, formatInt, formatUsd } from "@/lib/format";
+import { formatAssetValue, formatDateTime, formatInt } from "@/lib/format";
 import type { Counterparty } from "@/lib/types";
+import type { NetworkKey, WalletAsset } from "@/lib/networks";
 
 type Filter = "all" | "in" | "out";
 type SortKey = "totalVolume" | "txCount" | "lastSeen";
 
-export function CounterpartyTable({ data, total }: { data: Counterparty[]; total: number }) {
+export function CounterpartyTable({ data, total, asset, network }: { data: Counterparty[]; total: number; asset: WalletAsset; network: NetworkKey }) {
   const router = useRouter();
+  const amount = (value: number, compact = false) => formatAssetValue(value, asset, network, { compact });
   const [filter, setFilter] = useState<Filter>("all");
   const [sort, setSort] = useState<SortKey>("totalVolume");
   const [limit, setLimit] = useState(10);
@@ -26,7 +28,7 @@ export function CounterpartyTable({ data, total }: { data: Counterparty[]; total
     return [...f].sort((a, b) => val(b) - val(a));
   }, [data, filter, sort]);
 
-  if (!data.length) return <EmptyState title="No counterparties found" body="This address had no USDC transfers with other addresses in the analyzed window." />;
+  if (!data.length) return <EmptyState title="No counterparties found" body={`This address had no ${asset.symbol} transfers with other addresses in the analyzed window.`} />;
 
   return (
     <div>
@@ -52,7 +54,7 @@ export function CounterpartyTable({ data, total }: { data: Counterparty[]; total
       {/* Desktop / tablet table */}
       <div className="scroll-x hidden sm:block">
         <table className="w-full min-w-[760px] text-sm">
-          <caption className="sr-only">Counterparties ranked by USDC volume. Select a row to open its ArcLens report.</caption>
+          <caption className="sr-only">Counterparties ranked by {asset.symbol} volume. Select a row to open its ArcLens report.</caption>
           <thead className="border-y border-line text-xs text-muted">
             <tr>
               <th scope="col" className="w-10 px-3 py-2.5 pl-5 text-left font-normal">#</th>
@@ -70,14 +72,14 @@ export function CounterpartyTable({ data, total }: { data: Counterparty[]; total
                 key={c.address}
                 onClick={(e) => {
                   if ((e.target as HTMLElement).closest("a,button")) return;
-                  router.push(`/wallet/${c.address}`);
+                  router.push(`/wallet/${c.address}?network=${network}`);
                 }}
                 className="group cursor-pointer border-b border-line transition-colors last:border-0 hover:bg-elevated"
               >
                 <td className="px-3 py-3 pl-5 font-mono text-xs text-faint tabular">{i + 1}</td>
                 <td className="px-3 py-3">
                   <div className="flex items-center gap-2">
-                    <AddressLink address={c.address} />
+                    <AddressLink address={c.address} network={network} />
                     <KindTag kind={c.kind} label={c.label} />
                   </div>
                 </td>
@@ -93,10 +95,10 @@ export function CounterpartyTable({ data, total }: { data: Counterparty[]; total
                   )}
                 </td>
                 <td className="px-3 py-3 text-right tabular text-ink">
-                  {formatUsd(c.totalVolume)}
+                  {amount(c.totalVolume)}
                   {c.dominant === "both" && (
                     <span className="block text-[11px] text-faint">
-                      ↓{formatUsd(c.inVolume, { compact: true })} · ↑{formatUsd(c.outVolume, { compact: true })}
+                      ↓{amount(c.inVolume, true)} · ↑{amount(c.outVolume, true)}
                     </span>
                   )}
                 </td>
@@ -115,7 +117,7 @@ export function CounterpartyTable({ data, total }: { data: Counterparty[]; total
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <span className="font-mono text-[11px] text-faint">{i + 1}</span>
-                <AddressLink address={c.address} />
+                <AddressLink address={c.address} network={network} />
               </div>
               <DirectionBadge d={c.dominant} />
             </div>
@@ -124,7 +126,7 @@ export function CounterpartyTable({ data, total }: { data: Counterparty[]; total
                 {formatInt(c.txCount)} transfers
                 <KindTag kind={c.kind} label={c.label} />
               </div>
-              <span className="tabular text-sm text-ink">{formatUsd(c.totalVolume)}</span>
+              <span className="tabular text-sm text-ink">{amount(c.totalVolume)}</span>
             </div>
           </li>
         ))}

@@ -2,12 +2,14 @@ import "server-only";
 import type { ErrorCode, ErrorResponse } from "@/lib/types";
 
 const MESSAGES: Record<ErrorCode, string> = {
-  INVALID_ADDRESS: "Please enter a valid Arc wallet address.",
-  INVALID_HASH: "Please enter a valid Arc transaction hash.",
+  INVALID_ADDRESS: "Please enter a valid wallet address.",
+  INVALID_HASH: "Please enter a valid transaction hash.",
   INVALID_WINDOW: "That time window isn't available on this deployment.",
-  NOT_FOUND: "Nothing was found on Arc mainnet for that input.",
+  INVALID_NETWORK: "That network isn't supported.",
+  INVALID_ASSET: "That asset selection isn't valid.",
+  NOT_FOUND: "Nothing was found on the selected network for that input.",
   RATE_LIMITED: "Too many analyses in a short time. Please wait a moment and try again.",
-  UPSTREAM_UNAVAILABLE: "Arc data is temporarily unavailable. Please try again shortly.",
+  UPSTREAM_UNAVAILABLE: "Chain data is temporarily unavailable. Please try again shortly.",
   INTERNAL: "Something went wrong while analyzing. Please try again.",
 };
 
@@ -15,6 +17,8 @@ const STATUS: Record<ErrorCode, number> = {
   INVALID_ADDRESS: 400,
   INVALID_HASH: 400,
   INVALID_WINDOW: 400,
+  INVALID_NETWORK: 400,
+  INVALID_ASSET: 400,
   NOT_FOUND: 404,
   RATE_LIMITED: 429,
   UPSTREAM_UNAVAILABLE: 503,

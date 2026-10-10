@@ -5,8 +5,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AddressLink, CopyButton, EmptyState, ExternalLink, KindTag } from "@/components/ui/primitives";
 import { track } from "@/lib/analytics-events";
-import { explorerBlockUrl, explorerTxUrl } from "@/lib/arc/chain";
-import { formatDateTime, formatInt, formatUsd, formatUsdc, shortAddress } from "@/lib/format";
+import { explorerBlockUrl, explorerTxUrl, type NetworkKey, type WalletAsset } from "@/lib/networks";
+import { formatAssetValue, formatDateTime, formatInt, formatUsdc, shortAddress } from "@/lib/format";
 import type { ApiResponse, TransactionInsight } from "@/lib/types";
 
 type State =
@@ -14,9 +14,9 @@ type State =
   | { status: "ready"; data: TransactionInsight }
   | { status: "error"; code: string; message: string };
 
-export function TxView({ hash }: { hash: string }) {
+export function TxView({ hash, network }: { hash: string; network: NetworkKey }) {
   const [retry, setRetry] = useState(0);
-  const key = `${hash}|${retry}`;
+  const key = `${hash}|${network}|${retry}`;
   const [keyed, setKeyed] = useState<{ key: string; state: State }>({ key, state: { status: "loading" } });
   const state: State = keyed.key === key ? keyed.state : { status: "loading" };
 
@@ -24,7 +24,7 @@ export function TxView({ hash }: { hash: string }) {
     const ctrl = new AbortController();
     const setState = (next: State) => setKeyed({ key, state: next });
     track("transaction_analysis_started");
-    fetch(`/api/tx/${hash}`, { signal: ctrl.signal })
+    fetch(`/api/tx/${hash}?network=${network}`, { signal: ctrl.signal })
       .then((r) => r.json() as Promise<ApiResponse<TransactionInsight>>)
       .then((j) => {
         if (j.ok) {
@@ -37,7 +37,7 @@ export function TxView({ hash }: { hash: string }) {
           setState({ status: "error", code: "NETWORK", message: "Couldn't reach ArcLens. Check your connection and try again." });
       });
     return () => ctrl.abort();
-  }, [hash, retry, key]);
+  }, [hash, network, retry, key]);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
@@ -50,12 +50,12 @@ export function TxView({ hash }: { hash: string }) {
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <CopyButton value={hash} label="Copy hash" />
           <a
-            href={explorerTxUrl(hash)}
+            href={explorerTxUrl(hash, network)}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 rounded-md border border-line px-2 py-1 text-xs text-muted hover:border-line-strong hover:text-ink"
           >
-            Arc Explorer ↗<span className="sr-only">(opens in a new tab)</span>
+            Explorer ↗<span className="sr-only">(opens in a new tab)</span>
           </a>
         </div>
       </div>
@@ -65,10 +65,10 @@ export function TxView({ hash }: { hash: string }) {
         <div className="panel mt-8">
           <EmptyState
             icon="!"
-            title={state.code === "NOT_FOUND" ? "Transaction not found on Arc mainnet" : state.code === "RATE_LIMITED" ? "Slow down a little" : "Couldn't analyze this transaction"}
+            title={state.code === "NOT_FOUND" ? `Transaction not found on ${network === "arc-mainnet" ? "Arc Mainnet" : "Robinhood Chain Testnet"}` : state.code === "RATE_LIMITED" ? "Slow down a little" : "Couldn't analyze this transaction"}
             body={
               state.code === "NOT_FOUND"
-                ? "Check that the hash is complete and that it's from Arc mainnet (not testnet or another chain)."
+                ? `Check that the hash is complete and belongs to ${network === "arc-mainnet" ? "Arc Mainnet" : "Robinhood Chain Testnet"}.`
                 : state.message
             }
             action={
@@ -105,31 +105,39 @@ function TxSkeleton() {
 
 function TxReport({ tx }: { tx: TransactionInsight }) {
   const reduce = useReducedMotion();
-  const usdc = tx.movements.filter((m) => m.token === "USDC");
+  const usdc = tx.network === "arc-mainnet" ? tx.movements.filter((m) => m.token === "USDC") : [];
   const ok = tx.status === "success";
-  const headline = ok && usdc.length === 1 ? usdc[0] : null;
+  const headline = ok && usdc.length === 1
+    ? { from: usdc[0].from, to: usdc[0].to, value: usdc[0].value ?? 0, asset: { key: "native", symbol: "USDC", decimals: 18, address: null, kind: "native" } as WalletAsset }
+    : ok && tx.network !== "arc-mainnet" && tx.value > 0 && (tx.to ?? tx.contractCreated)
+      ? { from: tx.from, to: (tx.to ?? tx.contractCreated)!, value: tx.value, asset: { key: "native", symbol: tx.nativeCurrencySymbol, decimals: 18, address: null, kind: "native" } as WalletAsset }
+      : null;
+  const nativeAsset: WalletAsset = { key: "native", symbol: tx.nativeCurrencySymbol, decimals: 18, address: null, kind: "native" };
+  const amount = (value: number, asset = nativeAsset) => formatAssetValue(value, asset, tx.network);
 
   const facts: [string, React.ReactNode][] = [
     ["Status", <span key="s" className={`inline-flex items-center gap-1.5 ${ok ? "text-good" : "text-bad"}`}><span aria-hidden="true">{ok ? "✓" : "✕"}</span>{ok ? "Success" : "Reverted"}</span>],
-    ["Amount", usdc.length === 0 ? "No USDC moved" : usdc.length === 1 ? formatUsdc(usdc[0].value ?? 0) : `${formatInt(usdc.length)} legs · largest ${formatUsdc(Math.max(...usdc.map((m) => m.value ?? 0)))}`],
-    ["Native value sent", formatUsdc(tx.value)],
+    ["Amount", tx.network === "arc-mainnet"
+      ? usdc.length === 0 ? "No USDC moved" : usdc.length === 1 ? formatUsdc(usdc[0].value ?? 0) : `${formatInt(usdc.length)} legs · largest ${formatUsdc(Math.max(...usdc.map((m) => m.value ?? 0)))}`
+      : `${formatInt(tx.movements.length)} ERC-20 transfer logs`],
+    ["Native value sent", amount(tx.value)],
     ["Token", usdc.length ? "USDC (native)" : tx.movements.length ? [...new Set(tx.movements.map((m) => m.token))].join(", ") : "None"],
-    ["From", <span key="f" className="flex flex-wrap items-center gap-2"><AddressLink address={tx.from} full className="break-all text-xs" /><KindTag kind="unknown" label={tx.fromLabel} /></span>],
+    ["From", <span key="f" className="flex flex-wrap items-center gap-2"><AddressLink address={tx.from} full network={tx.network} className="break-all text-xs" /><KindTag kind="unknown" label={tx.fromLabel} /></span>],
     [
       tx.contractCreated ? "Contract created" : "To",
       tx.contractCreated ? (
-        <AddressLink key="c" address={tx.contractCreated} full className="break-all text-xs" />
+        <AddressLink key="c" address={tx.contractCreated} full network={tx.network} className="break-all text-xs" />
       ) : tx.to ? (
-        <span key="t" className="flex flex-wrap items-center gap-2"><AddressLink address={tx.to} full className="break-all text-xs" /><KindTag kind={tx.toIsContract ? "contract" : "account"} label={tx.toLabel} /></span>
+        <span key="t" className="flex flex-wrap items-center gap-2"><AddressLink address={tx.to} full network={tx.network} className="break-all text-xs" /><KindTag kind={tx.toIsContract ? "contract" : "account"} label={tx.toLabel} /></span>
       ) : (
         "—"
       ),
     ],
-    ["Block", <ExternalLink key="b" href={explorerBlockUrl(tx.blockNumber)}><span className="font-mono">{formatInt(tx.blockNumber)}</span></ExternalLink>],
+    ["Block", <ExternalLink key="b" href={explorerBlockUrl(tx.blockNumber, tx.network)}><span className="font-mono">{formatInt(tx.blockNumber)}</span></ExternalLink>],
     ["Timestamp", formatDateTime(tx.timestamp)],
-    ["Confirmations", `${formatInt(tx.confirmations)} (final on inclusion)`],
-    ["Network", "Arc Mainnet · chain 5042"],
-    ["Gas fee", `${formatUsd(tx.fee, { precise: true })} USDC`],
+    [tx.network === "arc-mainnet" ? "Confirmations" : "Blocks since inclusion", tx.network === "arc-mainnet" ? `${formatInt(tx.confirmations)} (final on inclusion)` : formatInt(Math.max(0, tx.confirmations - 1))],
+    ["Network", `${tx.networkName} · chain ${tx.chainId}`],
+    ["Gas fee", amount(tx.fee)],
     ["Gas used", formatInt(tx.gasUsed)],
     ["Sender nonce", formatInt(tx.nonce)],
     ...(tx.methodSelector ? [["Method selector", <span key="m" className="font-mono">{tx.methodSelector}</span>] as [string, React.ReactNode]] : []),
@@ -149,10 +157,10 @@ function TxReport({ tx }: { tx: TransactionInsight }) {
           <p id="tx-story" className="eyebrow mb-4">What happened</p>
           {headline ? (
             <div className="grid items-center gap-5 sm:grid-cols-[1fr_auto_1fr]">
-              <Party label="From" address={headline.from} />
+              <Party label="From" address={headline.from} network={tx.network} />
               <div className="flex flex-col items-center gap-2 text-center">
-                <span className="font-display text-4xl text-ink sm:text-5xl">{formatUsd(headline.value ?? 0)}</span>
-                <span className="text-xs text-muted">USDC</span>
+                <span className="font-display text-4xl text-ink sm:text-5xl">{amount(headline.value, headline.asset)}</span>
+                <span className="text-xs text-muted">{headline.asset.symbol}</span>
                 <svg viewBox="0 0 120 12" className="w-28 text-accent" aria-hidden="true">
                   <motion.path
                     d="M2 6H114M108 1l6 5-6 5"
@@ -166,7 +174,7 @@ function TxReport({ tx }: { tx: TransactionInsight }) {
                   />
                 </svg>
               </div>
-              <Party label="To" address={headline.to} align="right" />
+              <Party label="To" address={headline.to} network={tx.network} align="right" />
             </div>
           ) : null}
           <ul className={`${headline ? "mt-6 border-t border-line pt-5" : ""} space-y-2`}>
@@ -215,10 +223,10 @@ function TxReport({ tx }: { tx: TransactionInsight }) {
                   <div className="min-w-0 flex-1">
                     <p className="text-sm text-ink">
                       {m.value !== null ? `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 6 }).format(m.value)} ${m.token}` : `${m.valueRaw} (raw units)`}
-                      {!m.recognised && <span className="ml-2 text-xs text-muted">unrecognized token · <span className="font-mono">{shortAddress(m.tokenAddress)}</span></span>}
+                      {!m.recognised && <span className="ml-2 text-xs text-muted">{tx.network === "arc-mainnet" ? "unrecognized token" : "ERC-20 token metadata unavailable"} · <span className="font-mono">{shortAddress(m.tokenAddress)}</span></span>}
                     </p>
                     <p className="mt-0.5 flex flex-wrap items-center gap-1 text-xs text-muted">
-                      <AddressLink address={m.from} className="text-xs" /> → <AddressLink address={m.to} className="text-xs" />
+                      <AddressLink address={m.from} network={tx.network} className="text-xs" /> → <AddressLink address={m.to} network={tx.network} className="text-xs" />
                       <span className="ml-1 font-mono text-faint">log #{m.logIndex}</span>
                     </p>
                   </div>
@@ -230,20 +238,21 @@ function TxReport({ tx }: { tx: TransactionInsight }) {
       </div>
 
       <p className="text-xs leading-relaxed text-faint">
-        Decoded from the transaction receipt via Arc mainnet JSON-RPC. USDC amounts use the native 18-decimal EIP-7708 Transfer logs. The mirrored
-        6-decimal ERC-20 log is ignored to avoid double counting. Informational only.
+        {tx.network === "arc-mainnet"
+          ? "Decoded from the Arc mainnet receipt. USDC amounts use native 18-decimal EIP-7708 Transfer logs; the mirrored ERC-20 log is skipped to prevent double counting."
+          : "Native transaction values and successful internal transfers are indexed by the Robinhood testnet explorer. ERC-20 movements are decoded from standard Transfer(address,address,uint256) receipt logs; values stay in token units."} Informational only.
       </p>
     </div>
   );
 }
 
-function Party({ label, address, align }: { label: string; address: string; align?: "right" }) {
+function Party({ label, address, network, align }: { label: string; address: string; network: NetworkKey; align?: "right" }) {
   return (
     <div className={`min-w-0 rounded-lg border border-line bg-bg/40 p-4 ${align === "right" ? "sm:text-right" : ""}`}>
       <p className="eyebrow mb-2">{label}</p>
-      <AddressLink address={address} className="text-sm" />
+      <AddressLink address={address} network={network} className="text-sm" />
       <p className="mt-2 text-xs">
-        <Link href={`/wallet/${address}`} className="text-muted hover:text-accent">Analyze wallet →</Link>
+        <Link href={`/wallet/${address}?network=${network}`} className="text-muted hover:text-accent">Analyze wallet →</Link>
       </p>
     </div>
   );

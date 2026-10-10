@@ -4,15 +4,16 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { Fragment, useId, useMemo, useState } from "react";
 import { AddressLink, CopyButton, DirectionBadge, EmptyState, ExternalLink, Segmented } from "@/components/ui/primitives";
-import { explorerBlockUrl, explorerTxUrl } from "@/lib/arc/chain";
-import { formatDateTime, formatInt, formatUsd, formatUsdc, shortAddress } from "@/lib/format";
+import { explorerBlockUrl, explorerTxUrl } from "@/lib/networks";
+import { formatAssetValue, formatDateTime, formatInt, shortAddress } from "@/lib/format";
 import type { Transaction } from "@/lib/types";
+import type { NetworkKey, WalletAsset } from "@/lib/networks";
 
 type Filter = "all" | "in" | "out" | "large" | "recent";
 type Sort = "date" | "amount";
 const PAGE = 20;
 
-export function TransactionExplorer({ data, total, analyzedAt }: { data: Transaction[]; total: number; analyzedAt: number }) {
+export function TransactionExplorer({ data, total, analyzedAt, asset, network }: { data: Transaction[]; total: number; analyzedAt: number; asset: WalletAsset; network: NetworkKey }) {
   const [filter, setFilter] = useState<Filter>("all");
   const [sort, setSort] = useState<Sort>("date");
   const [q, setQ] = useState("");
@@ -20,6 +21,7 @@ export function TransactionExplorer({ data, total, analyzedAt }: { data: Transac
   const [open, setOpen] = useState<string | null>(null);
   const searchId = useId();
   const reduce = useReducedMotion();
+  const amount = (value: number, compact = false) => formatAssetValue(value, asset, network, { compact });
 
   const largeThreshold = useMemo(() => {
     if (!data.length) return Infinity;
@@ -45,7 +47,7 @@ export function TransactionExplorer({ data, total, analyzedAt }: { data: Transac
   const cur = Math.min(page, pages - 1);
   const view = rows.slice(cur * PAGE, cur * PAGE + PAGE);
 
-  if (!data.length) return <EmptyState title="No USDC activity found" body="No USDC transfers involving this address were recorded in the analyzed window." />;
+  if (!data.length) return <EmptyState title={`No ${asset.symbol} activity found`} body={`No ${asset.symbol} transfers involving this address were recorded in the analyzed window.`} />;
 
   return (
     <div>
@@ -95,7 +97,7 @@ export function TransactionExplorer({ data, total, analyzedAt }: { data: Transac
         </div>
       </div>
       <p className="px-4 pb-3 text-xs text-muted sm:px-5">
-        {filter === "large" && `Large = at or above the 90th percentile (${formatUsd(largeThreshold)}). `}
+        {filter === "large" && `Large = at or above the 90th percentile (${amount(largeThreshold)}). `}
         {filter === "recent" && "Recent = within 1 hour of analysis. "}
         {total > data.length
           ? `Showing the ${formatInt(data.length)} most recent of ${formatInt(total)} transfers. Statistics above use all ${formatInt(total)}.`
@@ -128,12 +130,12 @@ export function TransactionExplorer({ data, total, analyzedAt }: { data: Transac
                     </span>
                     <span className={`shrink-0 tabular text-sm ${t.direction === "in" ? "text-ink" : "text-ink-2"}`}>
                       {t.direction === "in" ? "+" : "−"}
-                      {formatUsd(t.value)}
+                      {amount(t.value)}
                     </span>
                   </button>
                   {isOpen && (
                     <div id={`txm-${t.id}`} className="border-t border-line">
-                      <TxDetail t={t} />
+                      <TxDetail t={t} asset={asset} network={network} />
                     </div>
                   )}
                 </li>
@@ -142,7 +144,7 @@ export function TransactionExplorer({ data, total, analyzedAt }: { data: Transac
           </ul>
           <div className="scroll-x hidden sm:block">
             <table className="w-full min-w-[720px] text-sm">
-              <caption className="sr-only">USDC transfers for this address. Expand a row for full details.</caption>
+              <caption className="sr-only">{asset.symbol} transfers for this address on {network}. Expand a row for full details.</caption>
               <thead className="border-y border-line text-xs text-muted">
                 <tr>
                   <th scope="col" className="px-3 py-2.5 pl-5 text-left font-normal">Date (UTC)</th>
@@ -164,11 +166,11 @@ export function TransactionExplorer({ data, total, analyzedAt }: { data: Transac
                         <td className="px-3 py-2.5"><DirectionBadge d={t.direction} /></td>
                         <td className={`whitespace-nowrap px-3 py-2.5 text-right tabular ${t.direction === "in" ? "text-ink" : "text-ink-2"}`}>
                           {t.direction === "in" ? "+" : "−"}
-                          {formatUsd(t.value)}
+                          {amount(t.value)}
                         </td>
-                        <td className="px-3 py-2.5"><AddressLink address={t.counterparty} /></td>
+                        <td className="px-3 py-2.5"><AddressLink address={t.counterparty} network={network} /></td>
                         <td className="px-3 py-2.5">
-                          <Link href={`/tx/${t.txHash}`} className="font-mono text-[13px] text-muted hover:text-accent" title={t.txHash}>
+                          <Link href={`/tx/${t.txHash}?network=${network}`} className="font-mono text-[13px] text-muted hover:text-accent" title={t.txHash}>
                             {shortAddress(t.txHash, 8, 6)}
                           </Link>
                         </td>
@@ -203,7 +205,7 @@ export function TransactionExplorer({ data, total, analyzedAt }: { data: Transac
                                 transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
                                 className="overflow-hidden"
                               >
-                                <TxDetail t={t} />
+                                <TxDetail t={t} asset={asset} network={network} />
                               </motion.div>
                             </td>
                           </tr>
@@ -234,17 +236,18 @@ export function TransactionExplorer({ data, total, analyzedAt }: { data: Transac
   );
 }
 
-function TxDetail({ t }: { t: Transaction }) {
+function TxDetail({ t, asset, network }: { t: Transaction; asset: WalletAsset; network: NetworkKey }) {
+  const amount = formatAssetValue(t.value, asset, network);
   const items: [string, React.ReactNode][] = [
     ["Transaction hash", <span key="h" className="flex flex-wrap items-center gap-2"><span className="break-all font-mono text-xs text-ink-2">{t.txHash}</span><CopyButton value={t.txHash} /></span>],
     ["Timestamp", formatDateTime(t.timestamp)],
-    ["Block", <ExternalLink key="b" href={explorerBlockUrl(t.blockNumber)}><span className="font-mono text-xs">{formatInt(t.blockNumber)}</span></ExternalLink>],
-    ["From", <AddressLink key="f" address={t.from} full className="break-all text-xs" />],
-    ["To", <AddressLink key="t" address={t.to} full className="break-all text-xs" />],
-    ["Amount", formatUsdc(t.value)],
-    ["Token", "USDC (native, EIP-7708 transfer log)"],
-    ["Status", "Success: Transfer logs are only emitted by successful transactions"],
-    ["Log index", <span key="l" className="font-mono text-xs">{t.logIndex}</span>],
+    ["Block", <ExternalLink key="b" href={explorerBlockUrl(t.blockNumber, network)}><span className="font-mono text-xs">{formatInt(t.blockNumber)}</span></ExternalLink>],
+    ["From", <AddressLink key="f" address={t.from} full network={network} className="break-all text-xs" />],
+    ["To", <AddressLink key="t" address={t.to} full network={network} className="break-all text-xs" />],
+    ["Amount", amount],
+    ["Token", network === "arc-mainnet" ? "USDC (native, EIP-7708 transfer log)" : `${asset.symbol} (${asset.kind === "native" ? "native value transfer" : "ERC-20 Transfer log"})`],
+    ["Status", network === "arc-mainnet" ? "Success: Transfer logs are only emitted by successful transactions" : "Successful indexed transfer"],
+    [asset.kind === "native" && t.logIndex >= 1_000_000 ? "Internal trace index" : "Log index", <span key="l" className="font-mono text-xs">{asset.kind === "native" && t.logIndex >= 1_000_000 ? t.logIndex - 1_000_000 : t.logIndex}</span>],
   ];
   return (
     <div className="px-5 py-4">
@@ -257,8 +260,8 @@ function TxDetail({ t }: { t: Transaction }) {
         ))}
       </dl>
       <div className="mt-4 flex flex-wrap gap-4 text-xs">
-        <Link href={`/tx/${t.txHash}`} className="text-accent hover:underline">Analyze transaction →</Link>
-        <ExternalLink href={explorerTxUrl(t.txHash)}>View on Arc Explorer</ExternalLink>
+        <Link href={`/tx/${t.txHash}?network=${network}`} className="text-accent hover:underline">Analyze transaction →</Link>
+        <ExternalLink href={explorerTxUrl(t.txHash, network)}>View on Explorer</ExternalLink>
       </div>
     </div>
   );
