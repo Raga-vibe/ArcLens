@@ -32,6 +32,7 @@ function Hero() {
   return (
     <section className="relative isolate overflow-hidden border-b border-line">
       <div className="grid-bg pointer-events-none absolute inset-0 -z-20 opacity-60 [mask-image:radial-gradient(ellipse_at_70%_40%,black,transparent_70%)]" />
+      <div className="pointer-events-none absolute -top-24 left-1/4 -z-10 h-96 w-96 rounded-full bg-accent/10 blur-[100px]" aria-hidden="true" />
       <HeroNetwork className="absolute inset-0 -z-10 h-full w-full opacity-90" />
       <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-r from-bg via-bg/80 to-transparent md:via-bg/60" />
       <div className="mx-auto flex min-h-[calc(100svh-3.5rem)] max-w-7xl flex-col justify-center px-4 py-20 sm:px-6">

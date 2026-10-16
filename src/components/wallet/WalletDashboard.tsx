@@ -100,9 +100,9 @@ export function WalletHeader({
             id="wallet-network"
             value={network}
             onChange={(event) => onNetwork(event.target.value as NetworkKey)}
-            className="h-9 rounded-md border border-line bg-surface px-2.5 text-xs text-ink outline-none"
+            className="h-9 rounded-lg border border-line-strong bg-surface/90 px-3 text-xs font-medium text-ink outline-none transition-colors hover:border-accent/40 focus:border-accent cursor-pointer shadow-xs"
           >
-            {NETWORK_OPTIONS.map((option) => <option key={option.key} value={option.key}>{option.name}</option>)}
+            {NETWORK_OPTIONS.map((option) => <option key={option.key} value={option.key} className="bg-surface text-ink">{option.name}</option>)}
           </select>
           {report && report.availableAssets.length > 1 && (
             <>
@@ -111,10 +111,10 @@ export function WalletHeader({
                 id="wallet-asset"
                 value={assetKey}
                 onChange={(event) => onAsset(event.target.value)}
-                className="h-9 max-w-[220px] rounded-md border border-line bg-surface px-2.5 text-xs text-ink outline-none"
+                className="h-9 max-w-[220px] rounded-lg border border-line-strong bg-surface/90 px-3 text-xs font-medium text-ink outline-none transition-colors hover:border-accent/40 focus:border-accent cursor-pointer shadow-xs"
               >
                 {report.availableAssets.map((asset) => (
-                  <option key={asset.key} value={asset.key}>{asset.symbol}{asset.kind === "erc20" && asset.address ? ` · ${shortAddress(asset.address)}` : " · native"}</option>
+                  <option key={asset.key} value={asset.key} className="bg-surface text-ink">{asset.symbol}{asset.kind === "erc20" && asset.address ? ` · ${shortAddress(asset.address)}` : " · native"}</option>
                 ))}
               </select>
             </>

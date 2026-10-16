@@ -189,7 +189,7 @@ export function Segmented<T extends string>({
   label: string;
 }) {
   return (
-    <div role="radiogroup" aria-label={label} className="inline-flex rounded-lg border border-line bg-bg p-0.5">
+    <div role="radiogroup" aria-label={label} className="inline-flex rounded-lg border border-line bg-surface/90 p-0.5 shadow-xs backdrop-blur-md">
       {options.map((o) => (
         <button
           key={o.value}
@@ -198,8 +198,10 @@ export function Segmented<T extends string>({
           aria-checked={value === o.value}
           disabled={o.disabled}
           onClick={() => onChange(o.value)}
-          className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-35 ${
-            value === o.value ? "bg-elevated-2 text-ink shadow-[inset_0_0_0_1px_var(--line-strong)]" : "text-muted hover:text-ink"
+          className={`rounded-md px-2.5 py-1 text-xs font-medium transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-35 ${
+            value === o.value
+              ? "bg-elevated-2 text-ink shadow-[0_1px_3px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.06),inset_0_0_0_1px_var(--line-strong)]"
+              : "text-muted hover:text-ink hover:bg-elevated/50"
           }`}
         >
           {o.label}

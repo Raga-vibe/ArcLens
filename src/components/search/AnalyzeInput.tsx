@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useId, useMemo, useState, useTransition } from "react";
+import { useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
 import { EXAMPLE_ADDRESS } from "@/lib/site";
 import { classifyInput, MAX_INPUT_LENGTH } from "@/lib/validate";
 import { NETWORK_OPTIONS, type NetworkKey } from "@/lib/networks";
@@ -16,6 +16,7 @@ interface Props {
 export function AnalyzeInput({ size = "hero", autoFocus, showExample, defaultNetwork = "arc-mainnet" }: Props) {
   const router = useRouter();
   const id = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
   const [value, setValue] = useState("");
   const [network, setNetwork] = useState<NetworkKey>(defaultNetwork);
   const [prevDefaultNetwork, setPrevDefaultNetwork] = useState(defaultNetwork);
@@ -24,6 +25,25 @@ export function AnalyzeInput({ size = "hero", autoFocus, showExample, defaultNet
     setPrevDefaultNetwork(defaultNetwork);
     setNetwork(defaultNetwork);
   }
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        inputRef.current?.focus();
+        inputRef.current?.select();
+      } else if (
+        e.key === "/" &&
+        document.activeElement?.tagName !== "INPUT" &&
+        document.activeElement?.tagName !== "TEXTAREA"
+      ) {
+        e.preventDefault();
+        inputRef.current?.focus();
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const kind = useMemo(() => classifyInput(value), [value]);
@@ -64,18 +84,21 @@ export function AnalyzeInput({ size = "hero", autoFocus, showExample, defaultNet
           e.preventDefault();
           go(value);
         }}
-        className={`group relative flex w-full items-center gap-2 rounded-[14px] border bg-surface/90 backdrop-blur transition-[border-color,box-shadow] duration-300 ${
-          error ? "border-bad/60" : "border-line-strong focus-within:border-accent/60"
-        } focus-within:shadow-[0_0_0_4px_rgba(169,196,240,0.08)] ${hero ? "flex-wrap p-2 pl-4 sm:flex-nowrap sm:pl-5" : "p-1 pl-3"}`}
+        className={`group relative flex w-full items-center gap-2 rounded-[14px] border bg-surface/85 backdrop-blur-md shadow-xs transition-[border-color,box-shadow] duration-300 ${
+          error
+            ? "border-bad/60 shadow-[0_0_20px_-4px_rgba(224,98,90,0.15)]"
+            : "border-line-strong hover:border-line-strong focus-within:border-accent/80 focus-within:shadow-[0_0_24px_-4px_rgba(169,196,240,0.18),0_0_0_1px_rgba(169,196,240,0.3)]"
+        } ${hero ? "flex-wrap p-2 pl-4 sm:flex-nowrap sm:pl-5" : "p-1 pl-3"}`}
       >
         <label htmlFor={id} className="sr-only">
           Wallet address or transaction hash
         </label>
-        <svg aria-hidden="true" viewBox="0 0 20 20" className={`shrink-0 text-muted ${hero ? "size-5" : "size-4"}`} fill="none">
+        <svg aria-hidden="true" viewBox="0 0 20 20" className={`shrink-0 text-muted transition-colors group-focus-within:text-accent ${hero ? "size-5" : "size-4"}`} fill="none">
           <circle cx="9" cy="9" r="6" stroke="currentColor" strokeWidth="1.6" />
           <path d="m13.5 13.5 3.5 3.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
         </svg>
         <input
+          ref={inputRef}
           id={id}
           value={value}
           onChange={(e) => {
@@ -95,17 +118,37 @@ export function AnalyzeInput({ size = "hero", autoFocus, showExample, defaultNet
             hero ? "h-12 text-[15px] sm:text-base" : "h-9 text-[13px]"
           }`}
         />
+        {!value && (
+          <kbd
+            className={`pointer-events-none rounded border border-line bg-surface/80 font-mono text-muted shadow-xs transition-opacity ${
+              hero
+                ? "hidden md:inline-flex items-center gap-0.5 px-2 py-0.5 text-[11px]"
+                : "hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px]"
+            }`}
+            title="Press Cmd+K or / to search"
+          >
+            <span className={hero ? "text-xs" : "text-[10px]"}>⌘</span>K
+          </kbd>
+        )}
         {hero && (
-          <label className="flex shrink-0 items-center gap-2 rounded-lg border border-line bg-bg/70 px-2.5 text-xs text-muted">
+          <label className="flex shrink-0 items-center gap-2 rounded-lg border border-line bg-surface/90 px-2.5 text-xs text-muted shadow-xs transition-colors hover:border-line-strong">
+            <span
+              className={`size-1.5 rounded-full ${
+                network === "arc-mainnet" ? "bg-good" : "bg-accent"
+              }`}
+              aria-hidden="true"
+            />
             <span className="sr-only">Network</span>
             <select
               aria-label="Network"
               value={network}
               onChange={(event) => setNetwork(event.target.value as NetworkKey)}
-              className="h-9 max-w-[170px] bg-transparent text-ink outline-none"
+              className="h-9 max-w-[170px] bg-transparent font-medium text-ink outline-none cursor-pointer"
             >
               {NETWORK_OPTIONS.map((option) => (
-                <option key={option.key} value={option.key} className="bg-surface text-ink">{option.name}</option>
+                <option key={option.key} value={option.key} className="bg-surface text-ink">
+                  {option.name}
+                </option>
               ))}
             </select>
           </label>
