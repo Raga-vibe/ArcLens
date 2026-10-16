@@ -40,7 +40,7 @@ export default async function WalletPage(props: PageProps<"/wallet/[address]">) 
 
   return (
     <>
-      <Header />
+      <Header network={network} />
       <main id="main" className="min-h-[70vh]">
         {isAddress(address) ? (
           <WalletView address={normalizeAddress(address)} windowsByNetwork={windowsByNetwork} initialWindow={initialWindow} network={network} initialAsset={initialAsset} />

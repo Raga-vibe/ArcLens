@@ -3,7 +3,6 @@
 import { animate, useInView, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import { explorerAddressUrl } from "@/lib/arc/chain";
 import type { NetworkKey } from "@/lib/networks";
 import { shortAddress } from "@/lib/format";
 import type { AddressKind, AddressLabel, Direction } from "@/lib/types";
@@ -97,10 +96,6 @@ export function AddressLink({ address, full, className, network }: { address: st
       {full ? address : shortAddress(address)}
     </Link>
   );
-}
-
-export function explorerAddress(address: string) {
-  return explorerAddressUrl(address);
 }
 
 /** Animated number that counts up once when scrolled into view. */

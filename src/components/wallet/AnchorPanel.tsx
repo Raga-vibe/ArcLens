@@ -48,8 +48,9 @@ export function AnchorPanel({ report }: { report: WalletReport }) {
     return () => ctrl.abort();
   }, [address, refresh]);
 
+  const isArc = report.network === "arc-mainnet";
   const live = anchors?.deployed === true;
-  const alreadyAnchored = anchors?.list.some((a) => a.reportHash === report.reportHash) ?? false;
+  const alreadyAnchored = isArc && (anchors?.list.some((a) => a.reportHash === report.reportHash) ?? false);
 
   const downloadSnapshot = useCallback(() => {
     const blob = new Blob([canonicalSnapshotJson(report.snapshot)], { type: "application/json" });
@@ -62,7 +63,7 @@ export function AnchorPanel({ report }: { report: WalletReport }) {
   }, [report, address]);
 
   async function anchorOnArc() {
-    if (!live) return;
+    if (!live || !isArc) return;
     let tx: Hex | undefined;
     try {
       setStep({ s: "connecting" });
@@ -122,32 +123,42 @@ export function AnchorPanel({ report }: { report: WalletReport }) {
             >
               Download snapshot (JSON)
             </button>
-            {live && (
-              <button
-                type="button"
-                onClick={anchorOnArc}
-                disabled={busy || alreadyAnchored || step.s === "done"}
-                className="rounded-md bg-ink px-3 py-1.5 text-sm font-medium text-bg transition-colors hover:bg-white disabled:opacity-60"
-              >
-                {step.s === "connecting"
-                  ? "Connecting wallet…"
-                  : step.s === "confirm"
-                    ? "Confirm in your wallet…"
-                    : step.s === "pending"
-                      ? "Anchoring…"
-                      : alreadyAnchored || step.s === "done"
-                        ? "Anchored ✓"
-                        : "Anchor on Arc"}
-              </button>
+            {isArc ? (
+              live && (
+                <button
+                  type="button"
+                  onClick={anchorOnArc}
+                  disabled={busy || alreadyAnchored || step.s === "done"}
+                  className="rounded-md bg-ink px-3 py-1.5 text-sm font-medium text-bg transition-colors hover:bg-white disabled:opacity-60"
+                >
+                  {step.s === "connecting"
+                    ? "Connecting wallet…"
+                    : step.s === "confirm"
+                      ? "Confirm in your wallet…"
+                      : step.s === "pending"
+                        ? "Anchoring…"
+                        : alreadyAnchored || step.s === "done"
+                          ? "Anchored ✓"
+                          : "Anchor on Arc"}
+                </button>
+              )
+            ) : (
+              <span className="self-center text-xs text-muted">
+                On-chain anchoring via ArcLensRegistry is available for Arc Mainnet reports.
+              </span>
             )}
           </div>
           <div aria-live="polite" className="text-xs">
-            {anchors && !live && !anchors.failed && (
+            {!isArc ? (
+              <p className="text-muted">
+                This report is on {report.networkName}. You can download the snapshot to verify its keccak-256 fingerprint offline.
+              </p>
+            ) : anchors && !live && !anchors.failed ? (
               <p className="text-muted">
                 Anchoring switches on automatically once the ArcLensRegistry contract is deployed to its reserved address on Arc mainnet.
               </p>
-            )}
-            {live && step.s === "idle" && !alreadyAnchored && (
+            ) : null}
+            {isArc && live && step.s === "idle" && !alreadyAnchored && (
               <p className="text-muted">
                 {hasWallet() ? "Costs a network fee of well under one cent in USDC, paid from your wallet." : "Needs a browser wallet (MetaMask, Rabby…) with a little USDC on Arc."}
               </p>
@@ -171,7 +182,7 @@ export function AnchorPanel({ report }: { report: WalletReport }) {
         </div>
 
         <div className="min-w-0">
-          <p className="eyebrow mb-3">Anchored reports for this address</p>
+          <p className="eyebrow mb-3">{isArc ? "Anchored reports for this address" : "Arc Mainnet anchors for this address"}</p>
           {anchors === null ? (
             <div className="skeleton h-16 rounded-md" />
           ) : !live && !anchors.failed ? (

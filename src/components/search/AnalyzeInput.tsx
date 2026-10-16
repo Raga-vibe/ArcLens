@@ -10,13 +10,20 @@ interface Props {
   size?: "hero" | "compact";
   autoFocus?: boolean;
   showExample?: boolean;
+  defaultNetwork?: NetworkKey;
 }
 
-export function AnalyzeInput({ size = "hero", autoFocus, showExample }: Props) {
+export function AnalyzeInput({ size = "hero", autoFocus, showExample, defaultNetwork = "arc-mainnet" }: Props) {
   const router = useRouter();
   const id = useId();
   const [value, setValue] = useState("");
-  const [network, setNetwork] = useState<NetworkKey>("arc-mainnet");
+  const [network, setNetwork] = useState<NetworkKey>(defaultNetwork);
+  const [prevDefaultNetwork, setPrevDefaultNetwork] = useState(defaultNetwork);
+
+  if (defaultNetwork !== prevDefaultNetwork) {
+    setPrevDefaultNetwork(defaultNetwork);
+    setNetwork(defaultNetwork);
+  }
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const kind = useMemo(() => classifyInput(value), [value]);

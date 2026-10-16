@@ -58,11 +58,11 @@ export function CounterpartyTable({ data, total, asset, network }: { data: Count
           <thead className="border-y border-line text-xs text-muted">
             <tr>
               <th scope="col" className="w-10 px-3 py-2.5 pl-5 text-left font-normal">#</th>
-              <Th sort={sort} onSort={setSort}>Address</Th>
-              <Th sort={sort} onSort={setSort}>Direction</Th>
+              <th scope="col" className="px-3 py-2.5 text-left font-normal">Address</th>
+              <th scope="col" className="px-3 py-2.5 text-left font-normal">Direction</th>
               <Th sort={sort} onSort={setSort} k="txCount" className="text-right">Transfers</Th>
               <Th sort={sort} onSort={setSort} k="totalVolume" className="text-right">Volume</Th>
-              <Th sort={sort} onSort={setSort}>First</Th>
+              <th scope="col" className="px-3 py-2.5 text-left font-normal">First</th>
               <Th sort={sort} onSort={setSort} k="lastSeen">Latest</Th>
             </tr>
           </thead>
@@ -150,22 +150,18 @@ function Th({
   children,
   className,
 }: {
-  k?: SortKey;
+  k: SortKey;
   sort: SortKey;
   onSort: (k: SortKey) => void;
   children: React.ReactNode;
   className?: string;
 }) {
   return (
-    <th scope="col" aria-sort={k && sort === k ? "descending" : undefined} className={`px-3 py-2.5 text-left font-normal ${className ?? ""}`}>
-      {k ? (
-        <button type="button" onClick={() => onSort(k)} className={`inline-flex items-center gap-1 hover:text-ink ${sort === k ? "text-ink" : ""}`}>
-          {children}
-          <span aria-hidden="true" className={sort === k ? "opacity-100" : "opacity-0"}>↓</span>
-        </button>
-      ) : (
-        children
-      )}
+    <th scope="col" aria-sort={sort === k ? "descending" : undefined} className={`px-3 py-2.5 text-left font-normal ${className ?? ""}`}>
+      <button type="button" onClick={() => onSort(k)} className={`inline-flex items-center gap-1 hover:text-ink ${sort === k ? "text-ink" : ""}`}>
+        {children}
+        <span aria-hidden="true" className={sort === k ? "opacity-100" : "opacity-0"}>↓</span>
+      </button>
     </th>
   );
 }

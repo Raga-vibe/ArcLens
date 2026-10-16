@@ -5,7 +5,7 @@ import { type ReactNode, useState } from "react";
 import { ActivityChart, ChartLegend, type SeriesMode } from "@/components/charts/ActivityChart";
 import { FlowDiagram } from "@/components/charts/FlowDiagram";
 import { Heatmap } from "@/components/charts/Heatmap";
-import { CopyButton, CountUp, EmptyState, ExternalLink, KindTag, Panel, Segmented } from "@/components/ui/primitives";
+import { CopyButton, CountUp, EmptyState, KindTag, Panel, Segmented } from "@/components/ui/primitives";
 import { track } from "@/lib/analytics-events";
 import { explorerAddressUrl } from "@/lib/networks";
 import {
@@ -19,7 +19,7 @@ import {
   shortAddress,
 } from "@/lib/format";
 import type { WalletInsight, WalletReport, WindowKey } from "@/lib/types";
-import { NETWORK_OPTIONS, type NetworkKey } from "@/lib/networks";
+import { getNetwork, NETWORK_OPTIONS, type NetworkKey } from "@/lib/networks";
 import { AnchorPanel } from "./AnchorPanel";
 import { CounterpartyTable } from "./CounterpartyTable";
 import { TransactionExplorer } from "./TransactionExplorer";
@@ -53,8 +53,11 @@ export function WalletHeader({
       <div className="min-w-0">
         <p className="eyebrow mb-3 flex items-center gap-2">
           Wallet intelligence
-          {report?.wallet.isContract && <KindTag kind="contract" />}
-          {report?.wallet.label && <KindTag kind="contract" label={report.wallet.label} />}
+          {report?.wallet.label ? (
+            <KindTag kind="contract" label={report.wallet.label} />
+          ) : report?.wallet.isContract ? (
+            <KindTag kind="contract" />
+          ) : null}
         </p>
         <h1 className="flex flex-wrap items-center gap-3">
           <span className="font-mono text-2xl tracking-tight text-ink sm:text-3xl" title={address}>
@@ -157,7 +160,14 @@ export function WalletDashboard({ report }: { report: WalletReport }) {
   const { stats: s, wallet, window: w, comparison: cmp } = report;
   const now = report.generatedAt;
   const money = (v: number) => formatAssetValue(v, report.asset, report.network, { compact: v >= 1e6 });
-  const nativeAsset = { key: "native", symbol: wallet.balanceSymbol ?? report.asset.symbol, decimals: 18, address: null, kind: "native" as const };
+  const chain = getNetwork(report.network);
+  const nativeAsset = {
+    key: "native",
+    symbol: wallet.balanceSymbol ?? chain.nativeCurrency.symbol,
+    decimals: chain.nativeCurrency.decimals,
+    address: null,
+    kind: "native" as const,
+  };
   const balance = (v: number) => formatAssetValue(v, nativeAsset, report.network);
 
   const statItems: { label: string; node: ReactNode; sub?: ReactNode; show: boolean }[] = [
@@ -251,7 +261,7 @@ export function WalletDashboard({ report }: { report: WalletReport }) {
             </Panel>
             <Panel id="heatmap" title="When this wallet is active" eyebrow="Activity heatmap" description="Transfers by UTC weekday and hour across the analyzed window.">
               <div className="p-4 sm:p-5">
-                <Heatmap data={report.heatmap} />
+                <Heatmap data={report.heatmap} asset={report.asset} network={report.network} />
               </div>
             </Panel>
           </div>
@@ -356,8 +366,4 @@ function SummaryPanel({ report }: { report: WalletReport }) {
       </section>
     </div>
   );
-}
-
-export function ExternalExplorer({ address }: { address: string }) {
-  return <ExternalLink href={explorerAddressUrl(address)}>Explorer</ExternalLink>;
 }

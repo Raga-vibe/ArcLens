@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { DAY_NAMES, formatHour, formatInt, formatUsd } from "@/lib/format";
+import { DAY_NAMES, formatAssetValue, formatHour, formatInt, formatUsd } from "@/lib/format";
 import type { ActivityHeatmapPoint } from "@/lib/types";
+import type { NetworkKey, WalletAsset } from "@/lib/networks";
 
 const DAYS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 // Monday-first display order.
@@ -16,10 +17,19 @@ function cellColor(v: number, max: number) {
   return `rgba(95,143,224,${a.toFixed(3)})`;
 }
 
-export function Heatmap({ data }: { data: ActivityHeatmapPoint[] }) {
+export function Heatmap({
+  data,
+  asset,
+  network = "arc-mainnet",
+}: {
+  data: ActivityHeatmapPoint[];
+  asset?: WalletAsset;
+  network?: NetworkKey;
+}) {
   const [hover, setHover] = useState<ActivityHeatmapPoint | null>(null);
   const max = Math.max(0, ...data.map((d) => d.count));
   const grid = new Map(data.map((d) => [`${d.day}:${d.hour}`, d]));
+  const amount = (v: number) => (asset ? formatAssetValue(v, asset, network) : formatUsd(v));
 
   return (
     <div>
@@ -46,7 +56,7 @@ export function Heatmap({ data }: { data: ActivityHeatmapPoint[] }) {
               </span>
               {Array.from({ length: 24 }, (_, hour) => {
                 const c = grid.get(`${day}:${hour}`)!;
-                const label = `${DAY_NAMES[day]} ${formatHour(hour)} UTC: ${formatInt(c.count)} transfers, ${formatUsd(c.volume)}`;
+                const label = `${DAY_NAMES[day]} ${formatHour(hour)} UTC: ${formatInt(c.count)} transfers, ${amount(c.volume)}`;
                 return (
                   <button
                     type="button"
@@ -73,7 +83,7 @@ export function Heatmap({ data }: { data: ActivityHeatmapPoint[] }) {
               <span className="text-ink">
                 {DAY_NAMES[hover.day]} {formatHour(hover.hour)}–{formatHour((hover.hour + 1) % 24)} UTC
               </span>{" "}
-              · {formatInt(hover.count)} transfers · {formatUsd(hover.volume)}
+              · {formatInt(hover.count)} transfers · {amount(hover.volume)}
             </>
           ) : (
             "Hover or focus a cell for exact values. All times are UTC."

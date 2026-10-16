@@ -54,8 +54,7 @@ ArcLens reads from Arc and writes proofs back to it.
   traces. ERC-20 activity comes from indexed standard `Transfer(address,address,uint256)` logs, with token symbol and decimals from
   explorer metadata. The app does not assume Arc's EIP-7708 event exists on Robinhood Chain.
 - Select one asset at a time. The report shows token units and does not combine different assets or infer USD values.
-- Report fingerprints include the selected chain and asset. The `ArcLensRegistry` remains deployed on Arc and can anchor a report
-  snapshot for either supported source network.
+- Report fingerprints include the selected chain and asset. The `ArcLensRegistry` is deployed on Arc Mainnet for on-chain anchoring of Arc reports; canonical JSON snapshots can be downloaded and verified offline for either network.
 
 Research and endpoint details: [`docs/robinhood-research.md`](docs/robinhood-research.md).
 

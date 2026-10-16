@@ -27,7 +27,7 @@ export default async function TxPage(props: PageProps<"/tx/[hash]">) {
   const network = isNetworkKey(rawNetwork) ? rawNetwork : "arc-mainnet";
   return (
     <>
-      <Header />
+      <Header network={network} />
       <main id="main" className="min-h-[70vh]">
         {isTxHash(hash) ? (
           <TxView hash={hash.toLowerCase()} network={network} />
