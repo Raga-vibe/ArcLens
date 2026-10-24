@@ -2,9 +2,9 @@
 
 export const SITE = {
   name: "ArcLens",
-  tagline: "See what’s happening on Arc.",
+  tagline: "Clear intelligence across supported networks.",
   description:
-    "Explore Arc wallet activity through visual analytics, transaction flows, counterparties, and on-chain statistics.",
+    "Explore wallet activity on Arc Mainnet and Robinhood Chain Testnet through visual analytics, transaction flows, counterparties, and on-chain statistics.",
   // NEXT_PUBLIC_SITE_URL wins; on Vercel fall back to the production domain.
   url: (
     process.env.NEXT_PUBLIC_SITE_URL ||

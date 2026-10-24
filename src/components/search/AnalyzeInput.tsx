@@ -49,7 +49,7 @@ export function AnalyzeInput({ size = "hero", autoFocus, showExample, defaultNet
   const kind = useMemo(() => classifyInput(value), [value]);
   const hero = size === "hero";
 
-  function go(target: string) {
+  function go(target: string, targetNetwork = network) {
     const k = classifyInput(target);
     if (k.kind === "empty") {
       setError("Paste a wallet address or transaction hash to begin.");
@@ -61,7 +61,7 @@ export function AnalyzeInput({ size = "hero", autoFocus, showExample, defaultNet
     }
     setError(null);
     startTransition(() => {
-      router.push(`${k.kind === "address" ? `/wallet/${k.value}` : `/tx/${k.value}`}?network=${network}`);
+      router.push(`${k.kind === "address" ? `/wallet/${k.value}` : `/tx/${k.value}`}?network=${targetNetwork}`);
     });
   }
 
@@ -125,9 +125,9 @@ export function AnalyzeInput({ size = "hero", autoFocus, showExample, defaultNet
                 ? "hidden md:inline-flex items-center gap-0.5 px-2 py-0.5 text-[11px]"
                 : "hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px]"
             }`}
-            title="Press Cmd+K or / to search"
+            title="Press Ctrl+K or ⌘K, or /, to search"
           >
-            <span className={hero ? "text-xs" : "text-[10px]"}>⌘</span>K
+            Ctrl/⌘ K
           </kbd>
         )}
         {hero && (
@@ -181,16 +181,17 @@ export function AnalyzeInput({ size = "hero", autoFocus, showExample, defaultNet
           </p>
         ) : hero && showExample ? (
           <p className="text-muted">
-            Also accepts a transaction hash.{" "}
+            Also accepts a transaction hash. Example is on Arc Mainnet.{" "}
             <button
               type="button"
               onClick={() => {
                 setValue(EXAMPLE_ADDRESS);
-                go(EXAMPLE_ADDRESS);
+                setNetwork("arc-mainnet");
+                go(EXAMPLE_ADDRESS, "arc-mainnet");
               }}
               className="text-ink-2 underline decoration-line-strong underline-offset-4 transition-colors hover:text-accent hover:decoration-accent"
             >
-              Try an example
+              Try Arc example
             </button>
           </p>
         ) : null}

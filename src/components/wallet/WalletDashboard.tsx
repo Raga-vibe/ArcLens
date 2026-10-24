@@ -212,7 +212,7 @@ export function WalletDashboard({ report }: { report: WalletReport }) {
             title={`No ${report.asset.symbol} transfers in this window`}
             body={
               <>
-                ArcLens scanned blocks {formatInt(w.fromBlock)}–{formatInt(w.toBlock)} ({formatDuration(w.toTimestamp - w.fromTimestamp)}) and found no {report.asset.symbol}
+                ArcLens scanned blocks {formatInt(w.fromBlock)}–{formatInt(w.toBlock)} ({formatDuration(w.toTimestamp - w.fromTimestamp)}) on {chain.name} and found no {report.asset.symbol}
                 movements to or from this address. Try a longer window if available.
               </>
             }
@@ -276,11 +276,32 @@ export function WalletDashboard({ report }: { report: WalletReport }) {
         </>
       )}
 
-      <p className="pb-4 text-xs leading-relaxed text-faint">
-        Source: {report.source.description}. Metrics are reported in {report.asset.symbol} units, without combining different assets. Contract/Account tags come from
-        on-chain bytecode checks. ArcLens doesn&apos;t attribute addresses to people or
-        organizations. Informational only; not financial advice.
-      </p>
+      <details className="group rounded-xl border border-line bg-surface/50 px-4 py-3 text-sm text-muted">
+        <summary className="cursor-pointer list-none font-medium text-ink marker:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60">
+          <span className="flex items-center justify-between gap-3">
+            Data sources and report scope
+            <span aria-hidden="true" className="text-muted transition-transform group-open:rotate-180">⌄</span>
+          </span>
+        </summary>
+        <div className="mt-4 grid gap-4 border-t border-line pt-4 sm:grid-cols-2">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-faint">Network and coverage</p>
+            <p className="mt-1 text-ink">{chain.name} · {chain.environment} · Chain ID {chain.chainId}</p>
+            <p className="mt-1">{report.asset.symbol} activity from blocks {formatInt(w.fromBlock)}–{formatInt(w.toBlock)}, {formatDateTime(w.fromTimestamp)} to {formatDateTime(w.toTimestamp)}.</p>
+            <p className="mt-1">Report generated {formatDateTime(now)}.</p>
+          </div>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-faint">Method and limitations</p>
+            <p className="mt-1">{report.source.description} Metrics use {report.asset.symbol} units; different assets are never combined. Account and contract labels use an on-chain bytecode check. Addresses are not attributed to people or organizations.</p>
+            {report.network === "robinhood-testnet" && <p className="mt-1">Testnet activity may be incomplete or change as the network evolves. Testnet token amounts are not USD values.</p>}
+            <p className="mt-1">Informational analytics only; not financial advice.</p>
+          </div>
+          <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs sm:col-span-2">
+            <a href={chain.explorer} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 hover:text-ink">Open {chain.name} explorer ↗</a>
+            <a href={chain.documentation} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 hover:text-ink">Network documentation ↗</a>
+          </div>
+        </div>
+      </details>
     </div>
   );
 }

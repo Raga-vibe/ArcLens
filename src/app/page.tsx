@@ -2,33 +2,37 @@ import Link from "next/link";
 import { HeroNetwork } from "@/components/landing/HeroNetwork";
 import { LandingView } from "@/components/landing/LandingView";
 import { LiveBlock } from "@/components/landing/LiveBlock";
-import { ProofFacts } from "@/components/landing/ProofFacts";
 import { Reveal } from "@/components/motion/Reveal";
 import { AnalyzeInput } from "@/components/search/AnalyzeInput";
 import { Footer } from "@/components/site/Footer";
 import { Header } from "@/components/site/Header";
 import { EXAMPLE_ADDRESS } from "@/lib/site";
+import { getNetwork, isNetworkKey, type NetworkKey } from "@/lib/networks";
 
-export default function Home() {
+export default async function Home(props: PageProps<"/">) {
+  const search = await props.searchParams;
+  const network: NetworkKey = isNetworkKey(search.network) ? search.network : "arc-mainnet";
+
   return (
     <>
       <LandingView />
-      <Header search={false} />
+      <Header search={false} network={network} />
       <main id="main">
-        <Hero />
+        <Hero network={network} />
         <Problem />
         <Reveals />
         <Showcase />
         <HowItWorks />
-        <BuiltForArc />
-        <FinalCta />
+        <SupportedNetworks />
+        <FinalCta network={network} />
       </main>
       <Footer />
     </>
   );
 }
 
-function Hero() {
+function Hero({ network }: { network: NetworkKey }) {
+  const selectedNetwork = getNetwork(network);
   return (
     <section className="relative isolate overflow-hidden border-b border-line">
       <div className="grid-bg pointer-events-none absolute inset-0 -z-20 opacity-60 [mask-image:radial-gradient(ellipse_at_70%_40%,black,transparent_70%)]" />
@@ -42,17 +46,24 @@ function Hero() {
             Arc Lens · On-chain intelligence
           </p>
           <h1 className="font-display text-[clamp(3rem,9vw,6.5rem)] leading-[0.92] tracking-[-0.02em] text-ink">
-            See what’s happening <em className="text-accent">on Arc.</em>
+            See what’s happening <em className="text-accent">on-chain.</em>
           </h1>
           <p className="mt-6 max-w-lg text-lg leading-relaxed text-ink-2 sm:text-xl">
-            Turn raw Arc and Robinhood Chain Testnet activity into clear, visual intelligence. Choose a network in the search box.
+            Clear wallet intelligence for Arc Mainnet and Robinhood Chain Testnet. Choose a network, then enter an address or transaction hash.
           </p>
           <div className="mt-10 max-w-xl">
-            <AnalyzeInput size="hero" showExample />
+            <AnalyzeInput size="hero" showExample defaultNetwork={network} />
           </div>
           <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2">
-            <LiveBlock />
-            <span className="font-mono text-[11px] text-faint">CHAIN ID 5042 · USDC-NATIVE</span>
+            {network === "arc-mainnet" ? <LiveBlock /> : (
+              <span className="inline-flex items-center gap-2 font-mono text-[11px] text-muted">
+                <span className="size-1.5 rounded-full bg-accent" aria-hidden="true" />
+                Testnet environment
+              </span>
+            )}
+            <span className="font-mono text-[11px] text-faint">
+              {selectedNetwork.environment.toUpperCase()} · CHAIN {selectedNetwork.chainId} · {selectedNetwork.nativeCurrency.symbol} NATIVE
+            </span>
           </div>
         </div>
       </div>
@@ -85,7 +96,7 @@ function Problem() {
           }
         >
           <p>
-            Every transfer on Arc is public, but it arrives as hex: addresses, raw integers, block numbers.
+            Every transfer is public, but it arrives as hex: addresses, raw integers, block numbers.
             Answering a simple question like <em>“what has this wallet been doing?”</em> means reading hundreds of
             entries and doing the arithmetic yourself.
           </p>
@@ -301,52 +312,115 @@ function HowItWorks() {
   );
 }
 
-const ARC_FACTS = [
-  ["USDC is the native gas token", "Value on Arc is denominated in dollars, so ArcLens can report activity in USDC directly, without price conversion."],
-  ["Every USDC movement is a log", "Arc implements EIP-7708: native USDC transfers emit standard Transfer events from a system address. That's what ArcLens reads."],
-  ["Deterministic finality", "Transactions are final when included. A report never shows activity that could later be reorganized away."],
-  ["Standard EVM JSON-RPC", "ArcLens uses Arc's public RPC. No proprietary API, no keys, and the source can be swapped for an indexer."],
-];
-
-function BuiltForArc() {
+function SupportedNetworks() {
+  const arc = getNetwork("arc-mainnet");
+  const robinhood = getNetwork("robinhood-testnet");
   return (
     <section className="border-b border-line">
-      <div className="mx-auto grid max-w-7xl gap-14 px-4 py-24 sm:px-6 grid-cols-1 lg:grid-cols-[1fr_1.4fr] lg:py-32">
-        <SectionHead eyebrow="05 · Network" title="Built for Arc">
+      <div className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:py-32">
+        <SectionHead eyebrow="05 · Supported networks" title="Know exactly where your data comes from.">
           <p>
-            Arc is an open Layer-1 where USDC is the native currency. That design makes a dollar-denominated view
-            of on-chain activity unusually direct.
-          </p>
-          <p className="mt-4 text-sm text-muted">
-            Source: <a className="underline underline-offset-4 hover:text-ink" href="https://docs.arc.io" target="_blank" rel="noopener noreferrer">docs.arc.io</a>
+            Choose a network before you analyze. ArcLens keeps each chain&apos;s activity, native currency and data source clearly identified.
           </p>
         </SectionHead>
-        <dl className="grid gap-px overflow-hidden rounded-[var(--radius)] border border-line bg-line sm:grid-cols-2">
-          {ARC_FACTS.map(([t, b], i) => (
-            <Reveal key={t} delay={i * 0.06} className="bg-surface p-6">
-              <dt className="text-base font-medium text-ink">{t}</dt>
-              <dd className="mt-2 text-sm leading-relaxed text-muted">{b}</dd>
-            </Reveal>
-          ))}
-          <ProofFacts />
-        </dl>
+        <div className="mt-12 grid gap-4 lg:grid-cols-2">
+          <NetworkCard
+            name={arc.name}
+            environment={arc.environment}
+            chainId={arc.chainId}
+            currency={arc.nativeCurrency.symbol}
+            description="Arc uses native USDC for value transfer and gas. Amounts are shown in USDC units without price conversion."
+            source="Arc JSON-RPC · native EIP-7708 Transfer logs"
+            detail="Report fingerprints can be anchored on Arc Mainnet through ArcLensRegistry."
+            explorer={arc.explorer}
+            documentation={arc.documentation}
+          />
+          <NetworkCard
+            name={robinhood.name}
+            environment={robinhood.environment}
+            chainId={robinhood.chainId}
+            currency={robinhood.nativeCurrency.symbol}
+            description="Robinhood Chain Testnet uses ETH as its native currency. ERC-20 tokens are analyzed one at a time."
+            source="Explorer indexer · native transactions, internal transfers and ERC-20 logs"
+            detail="Testnet balances and tokens are for testing; ArcLens does not present them as USD values."
+            explorer={robinhood.explorer}
+            documentation={robinhood.documentation}
+          />
+        </div>
       </div>
     </section>
   );
 }
 
-function FinalCta() {
+function NetworkCard({
+  name,
+  environment,
+  chainId,
+  currency,
+  description,
+  source,
+  detail,
+  explorer,
+  documentation,
+}: {
+  name: string;
+  environment: string;
+  chainId: number;
+  currency: string;
+  description: string;
+  source: string;
+  detail: string;
+  explorer: string;
+  documentation: string;
+}) {
+  return (
+    <article className="panel flex h-full flex-col p-5 sm:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="eyebrow">{environment} network</p>
+        <span className="rounded-full border border-line bg-elevated/70 px-2.5 py-1 font-mono text-[10px] text-muted">
+          Chain ID {chainId}
+        </span>
+      </div>
+      <h3 className="mt-5 font-display text-3xl tracking-tight text-ink">{name}</h3>
+      <p className="mt-2 text-sm leading-relaxed text-ink-2">{description}</p>
+      <dl className="mt-6 grid gap-4 border-y border-line py-4 sm:grid-cols-2">
+        <div>
+          <dt className="eyebrow">Native currency</dt>
+          <dd className="mt-1 font-mono text-sm text-ink">{currency}</dd>
+        </div>
+        <div>
+          <dt className="eyebrow">Activity source</dt>
+          <dd className="mt-1 text-xs leading-relaxed text-ink-2">{source}</dd>
+        </div>
+      </dl>
+      <p className="mt-4 text-xs leading-relaxed text-muted">{detail}</p>
+      <div className="mt-auto flex flex-wrap gap-4 pt-6 text-xs font-medium">
+        <a className="text-ink-2 underline decoration-line-strong underline-offset-4 hover:text-accent" href={explorer} target="_blank" rel="noopener noreferrer">
+          Open explorer <span aria-hidden="true">↗</span>
+        </a>
+        <a className="text-ink-2 underline decoration-line-strong underline-offset-4 hover:text-accent" href={documentation} target="_blank" rel="noopener noreferrer">
+          Network documentation <span aria-hidden="true">↗</span>
+        </a>
+      </div>
+    </article>
+  );
+}
+
+function FinalCta({ network }: { network: NetworkKey }) {
   return (
     <section className="relative overflow-hidden">
       <div className="grid-bg pointer-events-none absolute inset-0 opacity-40 [mask-image:radial-gradient(ellipse_at_center,black,transparent_65%)]" />
       <div className="relative mx-auto flex max-w-3xl flex-col items-center px-4 py-28 text-center sm:px-6 lg:py-36">
         <Reveal>
           <h2 className="font-display text-[clamp(2.5rem,6vw,4.5rem)] leading-none tracking-[-0.015em]">
-            Explore an Arc wallet.
+            Explore wallet activity.
           </h2>
+          <p className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-ink-2">
+            Select a supported network and get a clear report of transfers, counterparties and activity patterns.
+          </p>
         </Reveal>
         <Reveal delay={0.1} className="mt-10 w-full max-w-xl text-left">
-          <AnalyzeInput size="hero" />
+          <AnalyzeInput size="hero" defaultNetwork={network} />
         </Reveal>
       </div>
     </section>

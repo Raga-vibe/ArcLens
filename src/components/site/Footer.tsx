@@ -9,7 +9,7 @@ export function Footer() {
         <div className="space-y-3">
           <Wordmark />
           <p className="max-w-sm text-sm text-muted">
-            Built for Arc Microgrants. Informational analytics only, not financial advice.
+            Wallet analytics for Arc Mainnet and Robinhood Chain Testnet. Informational only; not financial advice.
           </p>
         </div>
         <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted">

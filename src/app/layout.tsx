@@ -17,7 +17,7 @@ const display = Instrument_Serif({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
   title: {
-    default: "ArcLens | Arc Blockchain Intelligence",
+    default: "ArcLens | Multi-network Wallet Intelligence",
     template: "%s · ArcLens",
   },
   description: SITE.description,
@@ -26,13 +26,13 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     siteName: "ArcLens",
-    title: "ArcLens | Arc Blockchain Intelligence",
+    title: "ArcLens | Multi-network Wallet Intelligence",
     description: SITE.description,
     url: "/",
   },
   twitter: {
     card: "summary_large_image",
-    title: "ArcLens | Arc Blockchain Intelligence",
+    title: "ArcLens | Multi-network Wallet Intelligence",
     description: SITE.description,
   },
   robots: { index: true, follow: true },
